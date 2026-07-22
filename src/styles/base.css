@@ -1,0 +1,3947 @@
+@import "./tokens.css";
+
+/* ============================================================
+   Base + iOS-native shell styling
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* ---------- Sticker Club grain ----------
+   One fixed full-viewport noise layer over the whole app — the "printed
+   sticker sheet" texture. Opacity is themed (--grain-opacity): a genuine
+   candy-on-void look wants it fairly visible; the same intensity on the
+   light paper theme reads as visible static and fights the "avoid eye
+   strain" goal, so it's turned way down there instead of removed — a little
+   texture still reads as paper, not a flat digital fill. Static (non-
+   animated), pointer-events:none, so it never affects motion budgets or
+   hit-testing. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-size: 16px;
+  /* Baloo 2 has a noticeably smaller x-height than the system-sans stack
+     every other tracker uses — at the same declared px it measured ~10%
+     shorter / ~8% narrower (confirmed 2026-07-21 via canvas text-metrics).
+     Every component in this app has its own hardcoded px font-size (not
+     rem/em), so bumping body's own size wouldn't cascade to fix any of
+     them — font-size-adjust is the right tool instead: it corrects the
+     rendered size of whichever font actually loads to match a target
+     x-height ratio, in ONE rule, without touching the ~100+ individual
+     font-size declarations elsewhere. 0.52 was solved empirically (not
+     the spec's typical ~0.5 default) to match system-ui's rendered width
+     within 0.13% at 16px/600. */
+  font-size-adjust: 0.52;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
+  overscroll-behavior-y: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Themed scrollbars ----------
+   Track (background) and thumb (button) both use theme tokens, so scrollbars
+   match in light and dark. Elements that deliberately hide their scrollbar
+   (tab bar, chip rows) keep their own more-specific `scrollbar-width: none` /
+   `::-webkit-scrollbar { display: none }` rules and are unaffected. */
+* {
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, var(--surface-2)) var(--surface-2);
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-2);
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 45%, var(--surface-2));
+  border: 3px solid var(--surface-2);
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 75%, var(--surface-2));
+  border: 3px solid var(--surface-2);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: var(--surface-2);
+}
+
+/* ---------- App frame ---------- */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  width: 100%;
+  position: relative;
+  background: transparent;
+}
+
+.app__col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.app__main {
+  flex: 1;
+  padding: 0 var(--sp-4)
+    calc(var(--sp-8) + 64px + var(--safe-bottom));
+  padding-top: calc(var(--safe-top) + 8px);
+  animation: fade 0.2s var(--ease);
+}
+
+/* ---------- Page transitions: the cascade ----------
+   <main> remounts on every route change (key={route} in App.tsx), and each
+   of the new page's top-level blocks rises in with a small spring overshoot,
+   staggered a few frames apart — the page "deals itself" onto the desk
+   instead of blinking into place. Works in every browser. */
+@keyframes rise-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+.app__main > * {
+  animation: rise-pop 0.38s var(--ease) both;
+}
+.app__main > :nth-child(2) {
+  animation-delay: 45ms;
+}
+.app__main > :nth-child(3) {
+  animation-delay: 90ms;
+}
+.app__main > :nth-child(4) {
+  animation-delay: 135ms;
+}
+.app__main > :nth-child(n + 5) {
+  animation-delay: 180ms;
+}
+
+/* ---------- Page transitions: the tide turn (View Transitions API) ----------
+   Layered under the cascade in Chrome/Safari (see useRoute in router.ts):
+   the OUTGOING page sinks a few px and dissolves while the incoming page's
+   cascade plays — the old day's tide going out as the new one rolls in.
+   The new snapshot renders the live DOM, so the cascade above stays visible
+   inside it. Shell chrome (sidebar, appbar, tabbar, demo banner) gets its
+   own view-transition-name so it is captured as a separate, unchanged group
+   and holds perfectly still while the page moves under it. */
+@keyframes vt-tide-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.992);
+  }
+}
+::view-transition-old(root) {
+  animation: vt-tide-out 0.2s var(--ease) both;
+}
+::view-transition-new(root) {
+  animation: fade 0.16s var(--ease) both;
+}
+.sidebar {
+  view-transition-name: shell-sidebar;
+}
+.appbar {
+  view-transition-name: shell-appbar;
+}
+.tabbar {
+  view-transition-name: shell-tabbar;
+}
+.demobar {
+  view-transition-name: shell-demobar;
+}
+.reconnectbar {
+  view-transition-name: shell-reconnectbar;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app__main,
+  .app__main > * {
+    animation: none;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* ---------- Large iOS title ---------- */
+.screen-head {
+  padding: var(--sp-2) 0 var(--sp-4);
+}
+.screen-head__eyebrow {
+  color: var(--accent-2);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+/* Sticker type: big titles wear a hard offset extrude (no blur), the way a
+   printed sticker's letters throw a solid dimensional shadow — periwinkle
+   behind ink, so the title pops off the page instead of sitting flat on it.
+   The offset is in em so it scales with any title size that reuses this. */
+.screen-head__title {
+  font-family: var(--font-display);
+  font-size-adjust: 0.5;
+  font-size: 34px;
+  /* Titan One only ships weight 400 — any other value triggers browser
+     synthetic/faux bolding, which on an already-blocky display face reads
+     as smeared, over-thick "bolder than bolder" text (reported directly,
+     2026-07-21). */
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+  text-shadow: 0.065em 0.065em 0 var(--cat-sky);
+}
+
+/* ---------- Header (status pill + avatar) ---------- */
+.appbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding: calc(var(--safe-top) + 8px) var(--sp-4) 8px;
+  background: color-mix(in srgb, var(--bg) 68%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.appbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  flex: none;
+}
+.appbar__brandimg {
+  border-radius: 6px;
+  flex: none;
+}
+/* Small "Demo" pill next to the brand (both header and sidebar). Gently
+   breathes with a soft glow ring so it draws the eye without nagging. */
+.brand-demo {
+  flex: none;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--accent);
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  line-height: 1.5;
+  transform-origin: center;
+  animation: demo-pulse 2.4s var(--ease) infinite;
+}
+@keyframes demo-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  50% {
+    transform: scale(1.09);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-demo {
+    animation: none;
+  }
+}
+.appbar__spacer {
+  flex: 1;
+}
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+}
+.appbar__tour {
+  width: auto;
+  padding: 8px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+}
+.appbar__tour span {
+  display: none;
+}
+@media (min-width: 900px) {
+  .appbar__tour {
+    padding: 6px 12px 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .appbar__tour span {
+    display: inline;
+  }
+}
+
+/* ---------- Demo mode banner ---------- */
+.demobar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: 10px var(--sp-4);
+  background: var(--accent);
+  color: #fff;
+}
+.demobar__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.demobar__btn {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ---------- Reconnect-needed banner ---------- */
+.reconnectbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: 10px var(--sp-4);
+  background: var(--warn);
+  color: #fff;
+}
+.reconnectbar__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.reconnectbar__btn {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  background: #fff;
+  color: var(--warn);
+  font-size: 13px;
+  font-weight: 700;
+}
+.reconnectbar__btn:disabled {
+  opacity: 0.7;
+}
+
+/* ---------- Update-available toast ---------- */
+.updatebar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(72px + var(--safe-bottom));
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  max-width: calc(100% - var(--sp-4) * 2);
+  padding: 10px 12px 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: var(--shadow);
+  animation: sheet-up var(--dur) var(--ease);
+}
+.updatebar__text {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.updatebar__btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+@media (min-width: 900px) {
+  /* No mobile tab bar on desktop — sit closer to the corner. */
+  .updatebar {
+    left: auto;
+    right: var(--sp-6);
+    transform: none;
+    bottom: var(--sp-6);
+  }
+}
+
+/* ---------- Toast (quick-add confirmations) ---------- */
+.toaster {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(84px + var(--safe-bottom));
+  z-index: 65;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  max-width: calc(100% - var(--sp-4) * 2);
+  pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 10px 10px 10px 16px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  color: var(--surface);
+  box-shadow: var(--shadow);
+  animation: toast-up var(--dur) var(--ease);
+}
+.toast__msg {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toast__action {
+  flex: none;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+@media (min-width: 900px) {
+  .toaster {
+    left: auto;
+    right: var(--sp-6);
+    transform: none;
+    bottom: var(--sp-6);
+    align-items: flex-end;
+  }
+}
+
+/* ---------- Sync pill ---------- */
+.syncpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.syncpill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.syncpill--ok .syncpill__dot {
+  background: var(--success);
+}
+.syncpill--busy .syncpill__dot {
+  background: var(--accent);
+  animation: pulse 1s var(--ease) infinite;
+}
+.syncpill--off .syncpill__dot {
+  background: var(--warn);
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ---------- Bottom tab bar (iOS) ---------- */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px calc(8px + var(--safe-bottom));
+  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  border-top: 1px solid var(--hairline);
+}
+.tabbar__brandbtn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border-radius: 8px;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.tabbar__brand {
+  flex: none;
+  border-radius: 8px;
+}
+.tabbar__scroll {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  /* space-evenly falls back to flex-start once content overflows (negative free
+     space), per the flexbox spec — so this reads as a classic evenly-spread iOS
+     bar when everything fits, and degrades to a normal left-packed scroll list
+     once the user pins enough tabs to overflow. justify-content:center would NOT
+     degrade the same way — it centers even on overflow, leaving the first tab
+     scrolled half off-screen in both directions. */
+  justify-content: space-evenly;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabbar__scroll::-webkit-scrollbar {
+  display: none;
+}
+.tabbar__btn {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  transition: color 0.15s var(--ease);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.tabbar__btn svg {
+  width: 26px;
+  height: 26px;
+}
+.tabbar__btn--active {
+  color: var(--accent);
+}
+
+/* ---------- Bottom bar rearrange mode (press-and-hold, iOS-style jiggle) ---------- */
+.tabbar__btn--editing {
+  animation: tabbar-wiggle 0.26s ease-in-out infinite;
+  touch-action: none;
+}
+.tabbar__btn--editing:nth-child(odd) {
+  animation-delay: -0.13s;
+}
+.tabbar__btn--dragging {
+  z-index: 1;
+  animation: none;
+  color: var(--accent);
+}
+@keyframes tabbar-wiggle {
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+  50% {
+    transform: rotate(2deg);
+  }
+}
+.tabbar__iconwrap {
+  position: relative;
+  display: inline-flex;
+}
+.navbadge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--alert);
+  border: 1.5px solid var(--outline);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+.navbadge--inline {
+  position: static;
+  margin-left: auto;
+}
+.dash-due-badge {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.tabbar__unpin {
+  position: absolute;
+  top: -2px;
+  left: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--alert);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-sm);
+  z-index: 2;
+}
+.tabbar__unpin svg {
+  width: 12px;
+  height: 12px;
+}
+.tabbar-editbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: calc(var(--safe-top) + 10px) var(--sp-4) 10px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--hairline);
+  animation: fade 0.15s var(--ease);
+}
+.tabbar-editbar__label {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Coach tour scrolls targets into view via scrollIntoView; this keeps the
+   sticky appbar from covering the top of whatever it just scrolled to. */
+[data-tour] {
+  scroll-margin-top: 72px;
+}
+
+/* ---------- Sticker mechanics ----------
+   Shared vocabulary used all over the app: a real ink outline (never just a
+   soft shadow — the outline is what makes something read as a die-cut
+   sticker rather than a plain panel), a hard offset "pop" shadow in a
+   SIBLING candy hue (never a color's own tone, never black — see the
+   .pop-* classes), and a slight fixed rotation on a small, deliberate set
+   of featured elements (nav's active item, alert banners, recurring cards,
+   the hero). Tables, forms, and body text stay unrotated — per the
+   original spec's own restraint rule, tilting everything makes the app
+   unreadable, not charming. */
+.sticker-rot-a {
+  transform: rotate(-1.1deg);
+}
+.sticker-rot-b {
+  transform: rotate(0.8deg);
+}
+.sticker-rot-c {
+  transform: rotate(-0.6deg);
+}
+.pop-pink {
+  box-shadow: 5px 5px 0 var(--pop-pink);
+}
+.pop-mint {
+  box-shadow: 5px 5px 0 var(--pop-mint);
+}
+.pop-lemon {
+  box-shadow: 5px 5px 0 var(--pop-lemon);
+}
+.pop-cyan {
+  box-shadow: 5px 5px 0 var(--pop-cyan);
+}
+.pop-grape {
+  box-shadow: 5px 5px 0 var(--pop-grape);
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--surface);
+  border: 2px solid var(--outline);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-4);
+}
+.card + .card {
+  margin-top: var(--sp-3);
+}
+/* .rec-card is also .card, but lives in .rec-grid, which already spaces
+   cards via `gap` in both directions. The block-stacking rule above only
+   knows "the previous sibling in DOM order," not "same grid row" — inside
+   a multi-column grid it added an extra 12px top margin to every card
+   except the very first, pushing every row after the first down relative
+   to its own row-mates (confirmed 2026-07-20, reported directly). */
+.rec-grid > .card + .card {
+  margin-top: 0;
+}
+/* Same fix, same reason — .alert-stack sets its own gap (14px, roomier than
+   the default 12px so tilted sticker corners don't visually crowd), and its
+   children are .card too. */
+.alert-stack > .card + .card {
+  margin-top: 0;
+}
+/* Dashboard's compact chart row (ring + status/category/priority donuts) —
+   same margin-bleed fix, same reason: these are grid children, not a
+   vertical stack, so the inherited `.card + .card` margin must be zeroed
+   and real grid `gap` used instead. */
+.insights-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-4);
+}
+.insights-compact-grid > .card + .card {
+  margin-top: 0;
+}
+/* A section identity gets a color and a serif label, not just a small
+   uppercase eyebrow — a 3px colored rule sits to its left the way a colored
+   tab or spine label would, so "Today" vs "Task status" read as distinct
+   sections at a glance, not identical gray headers. */
+.section-title {
+  font-family: var(--font-display);
+  font-size-adjust: 0.5;
+  font-size: 19px;
+  /* Titan One only ships weight 400 — any other value triggers browser
+     synthetic/faux bolding, which on an already-blocky display face reads
+     as smeared, over-thick "bolder than bolder" text (reported directly,
+     2026-07-21). */
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  margin: var(--sp-5) 0 var(--sp-3);
+  padding-left: var(--sp-3);
+  border-left: 3px solid var(--muted);
+  line-height: 1.25;
+}
+
+/* ---------- Chips ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: var(--r-pill);
+  border: 2px solid var(--outline);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: transform 0.12s var(--ease), background 0.15s var(--ease), box-shadow 0.12s var(--ease);
+}
+.chip:active {
+  transform: scale(0.94);
+}
+.chip--on {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--pop-pink);
+}
+.chip--urgent {
+  font-weight: 700;
+}
+/* Small colored icon badge for compact chip buttons (quick-capture's type/
+   category pickers). Category pastels are only safe as fills under --ink
+   (see tokens.css) — never as an icon's own stroke color, which is how the
+   type-picker icon used to nearly disappear against the cream background. */
+.qc-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--ink);
+}
+.qc-pickers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+/* Coach-tour demo entry: a self-contained example row so the tour can show
+   the section + category pickers without the user having to type first. */
+.cal-demo-entry {
+  margin-top: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px dashed var(--hairline);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.cal-demo-entry__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.chip-row {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding: 2px 0 var(--sp-2);
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- Segmented control (iOS) ---------- */
+.segmented {
+  display: flex;
+  background: var(--surface-2);
+  border: 2px solid var(--outline);
+  border-radius: 100px;
+  padding: 3px;
+  gap: 2px;
+}
+.segmented__seg {
+  flex: 1;
+  text-align: center;
+  padding: 7px 4px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: color 0.15s var(--ease);
+  position: relative;
+  z-index: 1;
+}
+.segmented__seg--on {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+/* ---------- KPI strip (dashboard) ----------
+   One card, divided by hairlines — not four-to-eight separate shadowed
+   tiles. Wraps to more than one row on narrow screens (a phone can't fit
+   8-across), and each wrapped row keeps its own hairline divider under it
+   via border-top, so the grid still reads as one continuous strip instead
+   of floating fragments. */
+.statgrid {
+  display: flex;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 2px solid var(--outline);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: var(--sp-4);
+}
+.stat {
+  flex: 1 1 130px;
+  padding: var(--sp-4) var(--sp-4) 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  container-type: inline-size;
+  border-left: 1px solid var(--hairline);
+  margin-left: -1px;
+  transition: background 0.12s var(--ease), transform 0.12s var(--ease);
+}
+/* Every other tappable chip/button in the app (.btn, .chip) scales down on
+   press — the KPI tiles are clickable too (navigate to Tasks) but had no
+   tactile feedback at all, the one inconsistency found in an otherwise
+   deliberate, reduced-motion-respecting animation set. */
+.stat:active {
+  transform: scale(0.97);
+  background: var(--surface-2);
+}
+.stat:first-child {
+  border-left-color: transparent;
+  margin-left: 0;
+}
+.stat__value {
+  /* Money/percent values must never break mid-character ("$1,2" / "98") —
+     shrink to fit the tile's own width (not the viewport's) via a container
+     query instead of wrapping. */
+  font-family: var(--font-display);
+  font-size-adjust: 0.5;
+  font-size: clamp(18px, 24cqw, 34px);
+  /* Titan One only ships weight 400 — any other value triggers browser
+     synthetic/faux bolding, which on an already-blocky display face reads
+     as smeared, over-thick "bolder than bolder" text (reported directly,
+     2026-07-21). */
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+}
+.stat__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* ---------- Assignee avatar (initials circle) ---------- */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  flex: none;
+}
+.avatar--xs {
+  width: 16px;
+  height: 16px;
+  font-size: 8px;
+  vertical-align: -3px;
+  margin-right: 3px;
+}
+.avatar--sm {
+  width: 24px;
+  height: 24px;
+  font-size: 10px;
+}
+.inline-avatar-wrap {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ---------- Rows / list items ---------- */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+}
+.row + .row {
+  border-top: 1px solid var(--hairline);
+}
+/* Briefly pulses a row so a jump from the calendar/a toast's "View" lands
+   somewhere findable instead of just scrolling to a screenful of look-alikes. */
+.row--flash {
+  border-radius: var(--r-input);
+  animation: row-flash 2s var(--ease);
+}
+@keyframes row-flash {
+  0%, 100% { background: transparent; }
+  15%, 60% { background: var(--accent-soft); }
+}
+.row__body {
+  flex: 1;
+  min-width: 0;
+}
+.row__title {
+  font-weight: 600;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.row__sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+.row--done .row__title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+/* ---------- Checkbox (tap target) ---------- */
+.check {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--hairline);
+  display: grid;
+  place-items: center;
+  flex: none;
+  transition: all 0.18s var(--ease);
+  color: transparent;
+}
+.check--on {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+.check svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---------- FAB ---------- */
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: calc(72px + var(--safe-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  background: var(--accent);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  /* Sticker shadow: a HARD offset in a sibling candy hue (pink — accent is
+     mint, never a color's own tone) under the soft glow, so the button
+     reads as a die-cut sticker sitting on the page. Outlined in ink too,
+     same as every other sticker in the app. */
+  border: 2.5px solid var(--outline);
+  box-shadow:
+    5px 5px 0 var(--pop-pink),
+    0 8px 22px color-mix(in srgb, var(--accent) 45%, transparent);
+  z-index: 25;
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+@media (hover: hover) {
+  .fab:hover {
+    transform: rotate(-5deg) scale(1.05);
+  }
+}
+.fab:active {
+  transform: scale(0.9);
+  box-shadow:
+    2px 2px 0 var(--pop-pink),
+    0 4px 12px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fab,
+  .fab:hover,
+  .fab:active {
+    transform: none;
+    transition: none;
+  }
+}
+.fab svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* ---------- Bottom sheet ---------- */
+.sheet-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  z-index: 40;
+  animation: fade 0.2s var(--ease);
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+.sheet {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 41;
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: var(--sp-3) var(--sp-4)
+    calc(var(--sp-6) + var(--safe-bottom));
+  box-shadow: var(--shadow);
+  max-height: 92dvh;
+  overflow-y: auto;
+  animation: sheet-up var(--dur) var(--ease);
+}
+@keyframes sheet-up {
+  from {
+    transform: translate(-50%, 100%);
+  }
+  to {
+    transform: translate(-50%, 0);
+  }
+}
+/* Unlike sheet-up, .toast has no horizontal offset of its own to preserve —
+   its parent .toaster centers it — so this only animates on the Y axis. Using
+   sheet-up here made the toast render translateX(-50%) of ITS OWN width during
+   the animation (visibly off to the left), then snap back to its real,
+   already-centered position the instant the animation ended. */
+@keyframes toast-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.sheet__grabber {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--hairline);
+  margin: 0 auto var(--sp-3);
+}
+.sheet__title {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: var(--sp-4);
+}
+
+/* ---------- Coach-mark tour (first-run, dashboard only) ---------- */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+.tour__scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--scrim);
+  animation: fade 0.2s var(--ease);
+}
+.tour__spot {
+  position: fixed;
+  z-index: 71;
+  border-radius: 16px;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px var(--scrim);
+  pointer-events: none;
+  transition: all 0.25s var(--ease);
+}
+.tour__card {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--sp-5) + var(--safe-bottom));
+  transform: translateX(-50%);
+  width: calc(100% - var(--sp-4) * 2);
+  max-width: 380px;
+  z-index: 72;
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+  padding: var(--sp-4);
+  animation: sheet-up var(--dur) var(--ease);
+}
+.tour__dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--sp-3);
+}
+.tour__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hairline);
+}
+.tour__dot--on {
+  background: var(--accent);
+  width: 16px;
+  border-radius: 3px;
+}
+.tour__title {
+  font-size: 17px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.tour__body {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 var(--sp-4);
+  line-height: 1.4;
+}
+.tour__grip {
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--hairline);
+  margin: -2px auto 10px;
+  cursor: grab;
+  touch-action: none;
+}
+.tour__grip:active {
+  cursor: grabbing;
+  background: var(--muted);
+}
+.tour__demo {
+  margin: 0 0 var(--sp-4);
+}
+.tour__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.tour__actions-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.tour__actions .btn {
+  width: auto;
+  padding: 10px 20px;
+}
+
+/* ---------- Form controls ---------- */
+.field {
+  margin-bottom: var(--sp-4);
+}
+.field__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--sp-2);
+}
+.input {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: var(--r-input);
+  background: var(--surface-2);
+  border: 2px solid transparent;
+  font-size: 16px; /* prevents iOS zoom */
+  transition: border 0.15s var(--ease);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+textarea.input {
+  resize: none;
+  min-height: 70px;
+}
+
+/* ---------- Buttons ---------- */
+/* Buttons carry structure, not just fill — a real border on the neutral/
+   ghost variants instead of a soft filled blob, and a tighter radius that
+   matches the panel system instead of the bubble-rounded default. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 15px;
+  border-radius: var(--r-input);
+  border: 2px solid var(--outline);
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--surface);
+  color: var(--ink);
+  transition: transform 0.12s var(--ease), opacity 0.15s, box-shadow 0.12s var(--ease);
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn:disabled:active {
+  transform: none;
+}
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--outline);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--pop-pink);
+}
+.btn--primary:active {
+  box-shadow: 1px 1px 0 var(--pop-pink);
+}
+.btn--danger {
+  background: var(--alert-soft);
+  border-color: var(--outline);
+  color: var(--alert);
+}
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+
+/* ---------- Progress bar ---------- */
+.pbar {
+  height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.pbar__fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transition: width 0.5s var(--ease);
+}
+.pbar__fill--over {
+  background: var(--alert);
+}
+
+/* ---------- Empty state ---------- */
+.empty {
+  text-align: center;
+  padding: var(--sp-8) var(--sp-4);
+  color: var(--muted);
+}
+.empty__emoji {
+  font-size: 44px;
+  margin-bottom: var(--sp-3);
+}
+.empty__title {
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.empty__sub {
+  font-size: 14px;
+}
+
+/* ---------- Utility ---------- */
+.muted {
+  color: var(--muted);
+}
+.big-number {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+.pos {
+  color: var(--success);
+}
+.neg {
+  color: var(--alert);
+}
+.spread {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.stack-2 > * + * {
+  margin-top: var(--sp-2);
+}
+
+/* ---------- Shared utilities (small, single-purpose; reused across screens
+   during the inline-style → CSS-class refactor of Dashboard, Settings, Debt,
+   Calendar, Charts) ---------- */
+.flex-none {
+  flex: none;
+}
+.txt-strong {
+  font-weight: 700;
+}
+.txt-strong-800 {
+  font-weight: 800;
+}
+.text-right {
+  text-align: right;
+}
+.text-center {
+  text-align: center;
+}
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+.col-stack {
+  display: flex;
+  flex-direction: column;
+}
+.spread--top {
+  align-items: flex-start;
+}
+.spread--gap8 {
+  gap: var(--sp-2);
+}
+.row--pad8 {
+  padding: 8px 0;
+}
+.row--clickable {
+  cursor: pointer;
+}
+.row__title--sm {
+  font-size: 14px;
+}
+.row__title--inline {
+  /* flex (not inline-flex) + min-width:0 so the text child can shrink and
+     truncate inside .row__body instead of overflowing into the due label. */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.row__title--inline > svg {
+  flex: none;
+}
+/* The actual title text: ellipsis on a single line. (text-overflow needs this
+   on the element that directly contains the text run, so the raw title is
+   wrapped in this span.) */
+.row__title-txt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ic-muted {
+  color: var(--muted);
+}
+.dot-8 {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dot-8--success {
+  background: var(--success);
+}
+.dot-9 {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+.dot-9--round {
+  border-radius: 50%;
+}
+.btn--stack {
+  margin-bottom: 10px;
+}
+.btn--auto {
+  width: auto;
+  flex: none;
+}
+.btn--unstyled {
+  background: none;
+}
+.card--tight {
+  padding: 4px 16px;
+}
+
+/* ---------- Recurring: card grid, top accent bar, toggle switch ---------- */
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+.rec-card {
+  position: relative;
+  overflow: hidden;
+  padding-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transform: rotate(var(--rot, 0deg));
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+@media (hover: hover) {
+  .rec-card:hover {
+    transform: rotate(var(--rot, 0deg)) translateY(-3px);
+    box-shadow: var(--shadow);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rec-card,
+  .rec-card:hover {
+    transform: none;
+    transition: none;
+  }
+}
+.rec-card__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+.rec-freq {
+  font-size: 11px;
+  font-weight: 700;
+  font-style: italic;
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+}
+.rec-card__name {
+  font-family: var(--font-display);
+  font-size-adjust: 0.5;
+  font-size: 18px;
+  /* Titan One only ships weight 400 — any other value triggers browser
+     synthetic/faux bolding, which on an already-blocky display face reads
+     as smeared, over-thick "bolder than bolder" text (reported directly,
+     2026-07-21). */
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.rec-card__sub {
+  font-size: 12.5px;
+}
+/* Ring + name/sub sit side by side; the ring is the card's visual anchor. */
+.rec-card__mid {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.rec-card__midtext {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rec-card__foot {
+  margin-top: auto;
+  padding-top: 4px;
+}
+.rec-manage-link {
+  font-size: 12px;
+  font-weight: 600;
+}
+/* ---------- Recurring: cycle ring ----------
+   Each series wears its own "orbit": a conic-gradient ring that fills with
+   the category hue as the cycle elapses (empty right after an occurrence,
+   full the day the next one lands), with the days-to-next countdown in the
+   ring's center. Pure CSS — the fill fraction arrives as a --frac custom
+   property from the component, no SVG, no library. */
+.cycle-ring {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  flex: none;
+  position: relative;
+  background: conic-gradient(
+    var(--ring-color, var(--accent)) calc(var(--frac, 0) * 1turn),
+    var(--surface-2) 0
+  );
+}
+.cycle-ring__hole {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.cycle-ring__num {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.cycle-ring__num--word {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cycle-ring__unit {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  line-height: 1.1;
+}
+
+/* ---------- Recurring: cadence field ----------
+   The page's centerpiece: a 14-day "score" of every active series — one row
+   per routine, one column per day, a dot wherever an occurrence lands. Reads
+   like a music-box roll / tide chart of the user's rhythms. Grid + dots only. */
+.cadence-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.cadence-scroll::-webkit-scrollbar {
+  display: none;
+}
+.cadence {
+  display: grid;
+  grid-template-columns: minmax(84px, 150px) repeat(14, minmax(22px, 1fr));
+  align-items: center;
+  min-width: 440px;
+}
+.cadence__corner {
+  grid-column: 1;
+}
+.cadence__dayhead {
+  text-align: center;
+  padding: 2px 0 6px;
+  line-height: 1.2;
+}
+.cadence__wd {
+  display: block;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-2);
+}
+.cadence__dn {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.cadence__dayhead--today .cadence__wd,
+.cadence__dayhead--today .cadence__dn {
+  color: var(--accent);
+}
+.cadence__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 5px 8px 5px 0;
+}
+.cadence__label-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.cadence__label-txt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cadence__cell {
+  display: grid;
+  place-items: center;
+  height: 26px;
+}
+/* Today's column gets a soft vertical wash so the field has a "now" line. */
+.cadence__cell--today,
+.cadence__dayhead--today {
+  background: var(--accent-soft);
+}
+.cadence__cell--today.cadence__cell--rowfirst {
+  border-radius: 0;
+}
+.cadence__dayhead--today {
+  border-radius: 8px 8px 0 0;
+}
+.cadence__cell--today.cadence__cell--rowlast {
+  border-radius: 0 0 8px 8px;
+}
+/* The resting texture of the field: a faint tick at every empty position, so
+   the dots read as notes ON a staff rather than floating in a void. */
+.cadence__tick {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--hairline);
+}
+.cadence__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.cadence__dot--today {
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* A real toggle switch (spec's signature control for pause/resume) —
+   plain button underneath, no native checkbox, so it's keyboard/AT
+   friendly via role="switch" + aria-checked on the element itself. */
+.toggle-switch {
+  width: 40px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 2px solid var(--outline);
+  position: relative;
+  flex: none;
+  transition: background 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+.toggle-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s var(--ease);
+}
+.toggle-switch--on {
+  background: var(--success);
+  border-color: var(--success);
+}
+.toggle-switch--on::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toggle-switch, .toggle-switch::after {
+    transition: none;
+  }
+}
+
+/* ---------- Mascot (Spark) ---------- */
+.mascot {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 2px solid var(--outline);
+  border-radius: 16px;
+  margin-bottom: var(--sp-3);
+}
+.mascot__face {
+  flex: none;
+}
+.mascot__line {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+/* ---------- Sparkle props ----------
+   2-3 tiny decorative accents per page max, never between the user and
+   data — see DashboardHero. Static (no animation), aria-hidden. */
+.sparkle {
+  position: absolute;
+  pointer-events: none;
+}
+.field--flex {
+  flex: 1;
+}
+.fs-11 {
+  font-size: 11px;
+}
+.fs-12 {
+  font-size: 12px;
+}
+.fs-13 {
+  font-size: 13px;
+}
+.eyebrow-12 {
+  font-size: 12px;
+  font-weight: 700;
+}
+.row-label-12 {
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+.row-label-13 {
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+.mt-2 {
+  margin-top: var(--sp-2);
+}
+.mt-3 {
+  margin-top: var(--sp-3);
+}
+.mt-4 {
+  margin-top: var(--sp-4);
+}
+.mt-5 {
+  margin-top: var(--sp-5);
+}
+.mt-10 {
+  margin-top: 10px;
+}
+.mb-1 {
+  margin-bottom: var(--sp-1);
+}
+.mb-2 {
+  margin-bottom: var(--sp-2);
+}
+.mb-3 {
+  margin-bottom: var(--sp-3);
+}
+.mb-4 {
+  margin-bottom: var(--sp-4);
+}
+.p-3 {
+  padding: var(--sp-3);
+}
+
+/* ---------- Dashboard hero (date · live clock · greeting) ---------- */
+/* Dashboard hero: a solid-color banner (the same device as a section-title's
+   accent, just at full scale) carrying the day and the greeting in the
+   serif display face. No ticking clock — a live clock read nothing about
+   the day's work, it was decoration inherited wholesale from TrackerA's
+   life-planner framing; this product's hero states the day and gets out
+   of the way. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 78%, var(--accent-2)) 100%);
+  color: #fff;
+  border: 2.5px solid var(--outline);
+  border-radius: var(--r-card);
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  margin: var(--sp-2) 0 var(--sp-5);
+  box-shadow:
+    5px 5px 0 var(--pop-pink),
+    var(--shadow);
+}
+.hero__date {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.hero__greet {
+  font-family: var(--font-display);
+  font-size-adjust: 0.5;
+  font-size: 32px;
+  /* Titan One only ships weight 400 — any other value triggers browser
+     synthetic/faux bolding, which on an already-blocky display face reads
+     as smeared, over-thick "bolder than bolder" text (reported directly,
+     2026-07-21). */
+  font-weight: 400;
+  /* Sticker extrude: pink hard shadow on the teal/mint banner — the same
+     mint-throws-pink sibling-hue pairing used everywhere else (FAB, active
+     nav, primary buttons). Was butter-yellow — white text + yellow shadow +
+     green banner was a genuine three-way clash, reported directly as "eye
+     breaking" (2026-07-21); yellow sitting directly against green is a
+     famously harsh adjacency, pink reads as the app's own accent pairing. */
+  text-shadow: 0.06em 0.06em 0 var(--cat-pink);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  text-wrap: balance;
+}
+.hero__name {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+  font: inherit;
+  padding: 0;
+}
+/* Dashboard greeting name: same color as the words before it; pen on hover only */
+.hero__setname {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+.hero__editicon {
+  opacity: 0;
+  color: rgba(255, 255, 255, 0.85);
+  transition: opacity 0.15s var(--ease);
+}
+.hero__setname:hover .hero__editicon,
+.hero__setname:focus-visible .hero__editicon {
+  opacity: 0.8;
+}
+.hero__addname {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  margin-left: 8px;
+}
+.hero__nameinput {
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+  padding: 0 2px 2px;
+  width: 8ch;
+  min-width: 5ch;
+  max-width: 12ch;
+}
+.hero__nameinput:focus {
+  outline: none;
+}
+.hero__nameinput::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- Spreadsheet-style calendar (write in the cell) ---------- */
+/* Horizontal scroll on phones so cells stay wide + editable; fills width on desktop. */
+.cal-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0 -8px;
+  padding: 0 8px 6px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+.cal-grid {
+  display: grid;
+  /* Each day column is at least 140px (readable + tappable); grows to fill wide
+     screens. When 7×140 exceeds the viewport, the .cal-scroll wrapper scrolls. */
+  grid-template-columns: repeat(7, minmax(140px, 1fr));
+  gap: 2px;
+  background: var(--outline);
+}
+.cal-head {
+  text-align: center;
+  padding: 9px 0;
+  font-family: var(--font-display);
+  /* Titan One's own aspect ratio differs from Baloo 2's — inheriting body's
+     0.52 overshoots Titan One by ~4% (measured 2026-07-21); 0.5 matches
+     system-ui's rendered width within 0.2% at display sizes. */
+  font-size-adjust: 0.5;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  background: var(--surface-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-cell {
+  min-height: 116px;
+  background: var(--surface);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+.cal-cell--week {
+  min-height: 200px;
+}
+.cal-cell--dim {
+  opacity: 0.5;
+}
+/* Today gets a soft wash, not a hard sticker fill — repeated across a 5×7
+   grid, a full candy cell would be too heavy; the wash + pip is enough of
+   a "you are here" moment here (the week view's cards get the bolder
+   treatment, see .weekcard--today). */
+.cal-cell--today {
+  background: linear-gradient(160deg, var(--warn-soft) 0%, var(--accent-soft) 100%);
+}
+.cal-cell__head {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.cal-daynum {
+  font-family: var(--font-display);
+  /* Titan One's own aspect ratio differs from Baloo 2's — inheriting body's
+     0.52 overshoots Titan One by ~4% (measured 2026-07-21); 0.5 matches
+     system-ui's rendered width within 0.2% at display sizes. */
+  font-size-adjust: 0.5;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+}
+.cal-todaypip {
+  font-family: var(--font);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--warn);
+  color: var(--outline);
+  padding: 1.5px 6px;
+  border-radius: 100px;
+  border: 1.5px solid var(--outline);
+}
+/* Sits on the week view's solid-accent card header instead of a plain
+   surface, so it needs the auto-flipping ink/surface pair (not --outline,
+   which is a FIXED near-black in both themes — near-black text on the
+   dark-mode --surface it swaps to would be nearly invisible, confirmed
+   2026-07-21). */
+.cal-todaypip--onaccent {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.cal-over7 {
+  font-size: 8px;
+  font-weight: 800;
+  color: var(--alert);
+}
+.cal-add {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transition: opacity 0.12s var(--ease), background 0.12s;
+}
+.cal-cell:hover .cal-add {
+  opacity: 1;
+}
+.cal-add:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.cal-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  text-align: left;
+  border: 1.5px solid var(--outline);
+  border-radius: 6px;
+  padding: 2px 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.cal-item__txt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-item--done {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.cal-more {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: left;
+  padding: 0 4px;
+}
+.cal-input {
+  width: 100%;
+  font-size: 11px;
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+}
+.cal-input:focus {
+  outline: none;
+}
+
+/* Touch devices can't hover — keep the + always faintly visible */
+@media (hover: none) {
+  .cal-add {
+    opacity: 0.5;
+  }
+}
+
+/* Roomier cells on desktop — this is where writing-in-cell shines */
+@media (min-width: 900px) {
+  .cal-cell {
+    min-height: 148px;
+    padding: 8px;
+  }
+  .cal-item {
+    font-size: 12px;
+    padding: 3px 6px;
+  }
+  .cal-daynum {
+    font-size: 14px;
+  }
+}
+
+/* ---------- Time blocking (slot rows) ---------- */
+.tb-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+.tb-slot + .tb-slot {
+  border-top: 1px solid var(--hairline);
+}
+.tb-time {
+  width: 74px;
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.tb-dot {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px dashed var(--hairline);
+}
+.tb-item {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1.5px solid transparent;
+}
+.tb-item:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.tb-slot--done .tb-item {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+/* ---------- Habits: Month analytics view ---------- */
+.hmv-weeks {
+  display: flex;
+  gap: var(--sp-3);
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.hmv-weeks::-webkit-scrollbar {
+  display: none;
+}
+.hmv-week {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+}
+.hmv-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.hmv-grid {
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.hmv-grid th,
+.hmv-grid td {
+  padding: 2px;
+  text-align: center;
+}
+.hmv-grid th {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 10px;
+}
+.hmv-grid__habit {
+  text-align: left !important;
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  padding-right: 10px !important;
+  z-index: 1;
+}
+.hmv-grid__today {
+  background: var(--accent-soft);
+}
+.hmv-habit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.hmv-cell {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: none;
+}
+.hmv-cell--on {
+  background: var(--success);
+}
+.hmv-habit-ico {
+  width: 30px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--accent);
+}
+
+/* ---------- Goals: vision-board cover icon ---------- */
+.goal-cover {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ---------- Weekly schedule (day cards with a daily ring) ---------- */
+/* ---------- Calendar: legend bar (month view nav) ---------- */
+.legendbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  background: var(--surface);
+  border: 2px solid var(--outline);
+  border-radius: var(--r-pill);
+  padding: 8px 8px 8px 18px;
+  box-shadow: 4px 4px 0 var(--pop-cyan);
+}
+.legendbar__nav {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 2px solid var(--outline);
+  display: grid;
+  place-items: center;
+}
+.legendbar__title,
+.monthstrip__title {
+  font-family: var(--font-display);
+  /* Titan One's own aspect ratio differs from Baloo 2's — inheriting body's
+     0.52 overshoots Titan One by ~4% (measured 2026-07-21); 0.5 matches
+     system-ui's rendered width within 0.2% at display sizes. */
+  font-size-adjust: 0.5;
+  font-size: 14px;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.legendbar__cats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.lg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.lg-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--outline);
+  flex: none;
+}
+.legendbar__spacer {
+  flex: 1;
+  min-width: 8px;
+}
+.legendbar__stat {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.legendbar__stat b {
+  color: var(--accent);
+}
+
+/* ---------- Calendar: month strip (week view nav) ---------- */
+.monthstrip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 2px solid var(--outline);
+  border-radius: var(--r-pill);
+  padding: 7px;
+  box-shadow: 4px 4px 0 var(--pop-grape);
+}
+.monthstrip__title {
+  padding: 0 4px;
+}
+.monthstrip__days {
+  flex: 1;
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.monthstrip__days::-webkit-scrollbar {
+  display: none;
+}
+.monthstrip__day {
+  flex: 1;
+  min-width: 30px;
+  position: relative;
+  text-align: center;
+  padding: 6px 2px 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.monthstrip__dd {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--muted-2);
+  margin-bottom: 2px;
+}
+.monthstrip__day--on {
+  background: var(--warn);
+  color: var(--outline);
+  box-shadow: 2px 2px 0 var(--pop-pink);
+}
+.monthstrip__day--on .monthstrip__dd {
+  color: var(--outline);
+  opacity: 0.7;
+}
+.monthstrip__pip {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+/* ---------- Calendar: weekly hero banner (week view) ---------- */
+.wk-banner {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-3);
+}
+@media (min-width: 640px) {
+  .wk-banner {
+    grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  }
+}
+.wb-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 2px solid var(--outline);
+  border-radius: var(--r-card);
+}
+.wb-hero {
+  background: var(--cat-pink);
+  color: var(--outline);
+}
+.wb-hero__ic {
+  flex: none;
+  color: var(--outline);
+}
+.wb-hero__num {
+  font-family: var(--font-display);
+  /* Titan One's own aspect ratio differs from Baloo 2's — inheriting body's
+     0.52 overshoots Titan One by ~4% (measured 2026-07-21); 0.5 matches
+     system-ui's rendered width within 0.2% at display sizes. */
+  font-size-adjust: 0.5;
+  font-size: 28px;
+  line-height: 1;
+}
+.wb-hero__lbl {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.75;
+}
+.wb-mini {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.wb-mini__n {
+  font-family: var(--font-display);
+  /* Titan One's own aspect ratio differs from Baloo 2's — inheriting body's
+     0.52 overshoots Titan One by ~4% (measured 2026-07-21); 0.5 matches
+     system-ui's rendered width within 0.2% at display sizes. */
+  font-size-adjust: 0.5;
+  font-size: 21px;
+  color: var(--ink);
+  line-height: 1;
+}
+.wb-mini__l {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.wb-mini__flames {
+  display: flex;
+  gap: 3px;
+  margin-top: 2px;
+}
+
+.week-grid {
+  display: grid;
+  grid-template-columns: 1fr; /* phones: stack days vertically (no squish) */
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+}
+@media (min-width: 700px) {
+  .week-grid {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  }
+}
+.weekcard {
+  background: var(--surface);
+  border: 2px solid var(--outline);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: rotate(var(--rot, 0deg));
+}
+/* Today skips the tint header (JS passes no background inline for it) and
+   gets the accent fill instead — same "the one glowing exception" idea the
+   original spec uses on void, adapted here as the one SOLID-accent card
+   among candy-tinted ones. */
+.weekcard--today .weekcard__head {
+  background: var(--accent);
+  color: #fff;
+}
+.weekcard__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 2px solid var(--outline);
+}
+.weekcard__num {
+  font-family: var(--font-display);
+  /* Titan One's own aspect ratio differs from Baloo 2's — inheriting body's
+     0.52 overshoots Titan One by ~4% (measured 2026-07-21); 0.5 matches
+     system-ui's rendered width within 0.2% at display sizes. */
+  font-size-adjust: 0.5;
+  font-size: 26px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.weekcard__wd {
+  font-weight: 700;
+  font-size: 14px;
+}
+.weekcard__date {
+  font-size: 12px;
+  color: var(--muted);
+}
+.weekcard__ring {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 6px;
+}
+.weekcard__list {
+  padding: 4px 14px 14px;
+}
+.weekrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.weekrow + .weekrow {
+  border-top: 1px solid var(--hairline);
+}
+.weekrow__txt {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.weekrow--done .weekrow__txt {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.weekrow__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--outline);
+}
+.weekcard__add {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 2px dashed var(--hairline);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* ---------- Mobile "More" hub grid ---------- */
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+.hub-card {
+  background: var(--surface);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-4) var(--sp-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  transition: transform 0.12s var(--ease);
+}
+.hub-card:active {
+  transform: scale(0.95);
+}
+.hub-card__ico {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+}
+.hub-card__label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ---------- Desktop sidebar (hidden on phone) ---------- */
+.sidebar {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .app {
+    /* Use the whole viewport width on wide screens. */
+    max-width: none;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+  }
+  .appbar {
+    display: none;
+  }
+  .tabbar {
+    display: none;
+  }
+  .tabbar-editbar {
+    display: none;
+  }
+  .app__main {
+    padding: var(--sp-6) var(--sp-8) var(--sp-8);
+    /* Fill the content column; content-specific readable widths are set per screen. */
+    max-width: none;
+  }
+  .app__main--wide {
+    max-width: none;
+  }
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    padding: var(--sp-5) var(--sp-3);
+    border-right: 1px solid var(--hairline);
+    background: color-mix(in srgb, var(--surface) 50%, transparent);
+  }
+  .fab {
+    right: 28px;
+  }
+}
+
+/* Compact stat tiles for thin modules (Savings, Debt, Hydration, …). Tile
+   padding: 16px (P3 — cards 20px, tiles 16px). */
+.tile-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: var(--sp-3);
+}
+.tile {
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  min-width: 0;
+  transition: transform 0.12s var(--ease);
+}
+.tile:active {
+  transform: scale(0.97);
+}
+.tile__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tile__value {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.tile__sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-display);
+  font-size-adjust: 0.5;
+  /* Titan One only ships weight 400 — any other value triggers browser
+     synthetic/faux bolding, which on an already-blocky display face reads
+     as smeared, over-thick "bolder than bolder" text (reported directly,
+     2026-07-21). */
+  font-weight: 400;
+  font-size: 21px;
+  letter-spacing: -0.005em;
+  padding: 0 var(--sp-3) var(--sp-4);
+  white-space: nowrap;
+}
+.sidebar__brand img {
+  border-radius: 7px;
+  flex: none;
+}
+.sidebar__coachbtn {
+  margin-bottom: var(--sp-4);
+}
+.sidebar__scroll {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.sidebar__group {
+  margin-bottom: var(--sp-4);
+}
+.sidebar__grouptitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 0 var(--sp-3) 6px;
+}
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px var(--sp-3);
+  border: 2px solid transparent;
+  border-radius: var(--r-input);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--muted);
+  transition: background 0.12s var(--ease), color 0.12s var(--ease), transform 0.12s var(--ease);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar__item--on {
+    transform: none;
+  }
+}
+.sidebar__item:hover {
+  background: var(--surface-2);
+}
+/* `:hover` (class+pseudo-class) otherwise beats `--on` (single class) on
+   specificity regardless of source order, so hovering the ALREADY-active
+   item swapped its accent fill for this pale hover background while the
+   active item's white text stayed — unreadable white-on-pale (reported
+   directly, 2026-07-21: "white text on vanila background"). Keep the
+   active item's own accent fill on hover instead of falling through to
+   the generic one. */
+.sidebar__item--on:hover {
+  background: var(--accent);
+}
+/* Active nav is its own little sticker: mint fill (the brand accent), ink
+   outline, a pink pop-shadow, tilted like it was pressed on by hand — the
+   same recipe as every other featured sticker in the app, not a separate
+   mechanism. Ink text-on-mint holds real contrast in BOTH themes because
+   the candy hues are deliberately light/mid tones in both (unlike the
+   previous ink/surface auto-invert this replaced, which existed only to
+   dodge white-on-near-white in dark mode — a fixed dark-outline-on-bright-
+   candy pairing sidesteps that same problem more simply). Icons use
+   currentColor, so they follow the ink text automatically. */
+.sidebar__item--on {
+  background: var(--accent);
+  border-color: var(--outline);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--pop-pink);
+  transform: rotate(-1deg);
+}
+.sidebar__ico {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  flex: none;
+}
+.sidebar__item--on .sidebar__ico,
+.sidebar__item:hover .sidebar__ico {
+  color: currentColor;
+}
+.sidebar__foot {
+  padding: var(--sp-3) var(--sp-3) 0;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sidebar__version {
+  font-size: 11px;
+  color: var(--muted);
+  padding-bottom: var(--sp-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ---------- Task filter & sort bar ---------- */
+.filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+  margin-top: var(--sp-2);
+}
+.input--sm {
+  width: auto;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--r-pill);
+}
+.filterbar__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px 4px;
+}
+.filterbar__toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+/* ---------- Task row meta (days-left, status, priority) ---------- */
+.row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+}
+.days-badge {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 34px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* A real, functional <select> styled as a status pill badge — background
+   and text color are set inline per-status (STATUS_PILL_BG/STATUS_COLOR,
+   lib/ui.ts) so it reads as a colored badge, not a plain dropdown, while
+   staying a native select underneath. */
+.status-sel {
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--surface-2);
+  border: 2px solid var(--outline);
+  border-radius: var(--r-pill);
+  padding: 4px 11px;
+  font-size: 11.5px;
+  font-weight: 700;
+  max-width: 108px;
+  cursor: pointer;
+}
+@media (max-width: 420px) {
+  .days-badge { display: none; }
+  .status-sel { max-width: 96px; }
+}
+
+/* ---------- Tasks: data table ----------
+   Replaced the single-column swipe-to-act row list (2026-07-21, reported
+   directly: match the reference mockup's information density) — category,
+   priority, status, assignee, due date, and days-left are now all visible
+   in their own columns instead of stacked into one row's subtext. The
+   column set needs real width to stay legible (~880px min), which won't
+   fit a phone or a narrower desktop window; .tasks-table-scroll handles
+   that with horizontal scroll instead of squishing columns unreadably —
+   same "flush frame" pattern as .cal-monthcard/.cal-scroll/.cal-grid
+   (outer card padding 0 + overflow hidden, inner scroll wrapper, so the
+   table's own edges sit flush against the card's outline with no gap). */
+.tasks-table-card {
+  padding: 0;
+  overflow: hidden;
+}
+.tasks-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tasks-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.tasks-table thead th {
+  text-align: left;
+  padding: 11px 14px;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-bottom: 2px solid var(--outline);
+  white-space: nowrap;
+}
+.tasks-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.tasks-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.tasks-table__row:hover {
+  background: var(--surface-2);
+}
+.tasks-table__row--overdue {
+  background: var(--alert-soft);
+}
+.tasks-table__row--overdue:hover {
+  background: color-mix(in srgb, var(--alert-soft) 70%, var(--surface-2));
+}
+.tasks-table__row--done .row__title-txt {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.tasks-table__task {
+  min-width: 220px;
+  max-width: 320px;
+  white-space: normal;
+}
+.tasks-table__taskbtn {
+  display: block;
+  text-align: left;
+  background: none;
+  width: 100%;
+}
+.tasks-table__notes {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tasks-table__prio {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.tasks-table__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tasks-table__actions button {
+  padding: 4px;
+}
+
+/* ---------- Dashboard hierarchy: greeting context + Today hero ---------- */
+.hero__context {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Today is the hero card: solid surface + real elevation + accent edge so it
+   ADVANCES against the pink background (a pink tint made it recede). */
+.card--today {
+  /* Explicit margin, not the usual `.card + .card` adjacent-sibling rule —
+     this card isn't a direct sibling of TaskInsights' last card (Person In
+     Charge sits one level deeper, inside TaskInsights' own wrapper div), so
+     the adjacent-sibling selector never matched here to begin with. */
+  margin-top: var(--sp-3);
+  background: var(--surface);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--accent-soft);
+}
+.card--today .row__title {
+  font-size: 17px;
+}
+
+/* ---------- Budget dashboard: Overview grid + Cash Flow rows ---------- */
+.ov-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-4);
+  margin-top: 12px;
+}
+.ov-cell__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+}
+.ov-cell__value {
+  font-size: 15px;
+  font-weight: 700;
+}
+.ov-cell__input {
+  width: 100%;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  border-bottom: 1.5px solid var(--hairline);
+}
+.ov-cell__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.cf-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 9px 0;
+  font-size: 14px;
+}
+.cf-row + .cf-row {
+  border-top: 1px solid var(--hairline);
+}
+.cf-row--total {
+  font-weight: 800;
+  padding-top: 12px;
+}
+.cf-row__label {
+  flex: 1;
+  min-width: 0;
+}
+.cf-row__col {
+  width: 84px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- HelpTip: the "(?)" affordance next to titles/labels ---------- */
+.helptip {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+.helptip__btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  flex: none;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.helptip__btn:active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.helptip__btn svg {
+  width: 12px;
+  height: 12px;
+}
+.helptip__bubble {
+  /* position: fixed + JS-measured left/top/bottom (see HelpTip.tsx) keeps this
+     bubble clamped inside the viewport no matter where its icon sits. */
+  position: fixed;
+  z-index: 50;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: var(--shadow);
+  animation: fade 0.15s var(--ease);
+}
+/* ---------- IconTip: long-press tooltip for icon-only buttons on touch ---------- */
+.icontip {
+  position: relative;
+  display: inline-flex;
+}
+.icontip__bubble {
+  position: fixed;
+  z-index: 50;
+  width: max-content;
+  max-width: min(220px, calc(100vw - 24px));
+  padding: 7px 11px;
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  box-shadow: var(--shadow);
+  animation: fade 0.15s var(--ease);
+  pointer-events: none;
+}
+.cf-head {
+  display: flex;
+  gap: var(--sp-3);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--hairline);
+}
+.cf-head .cf-row__label {
+  font-size: 11px;
+}
+.cf-head .cf-row__col {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* ============================================================
+   Below: classes added while converting inline style={{}} JSX
+   attributes to CSS classes in DashboardScreen, SettingsScreen,
+   DebtScreen, CalendarScreen and Charts.tsx. Grouped per screen.
+   ============================================================ */
+
+/* ---- Dashboard ---- */
+.section-title--flush {
+  margin: 0;
+}
+.section-title--compact {
+  margin: 0 0 var(--sp-3);
+}
+.section-title--tight8 {
+  margin: 0 0 var(--sp-2);
+}
+.section-title--accent2 {
+  border-left-color: var(--accent-2);
+}
+.section-title--warn {
+  border-left-color: var(--warn);
+}
+.section-title--success {
+  border-left-color: var(--success);
+}
+.section-title--accent {
+  border-left-color: var(--accent);
+}
+.section-title--alert {
+  border-left-color: var(--alert);
+}
+.muted-sub {
+  font-size: 13px;
+  margin-top: var(--sp-1);
+}
+.dash-today__head {
+  margin-bottom: var(--sp-3);
+}
+.dash-ring-label--empty {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.dash-ring-label {
+  font-size: 12px;
+  font-weight: 800;
+}
+.dash-overdue {
+  padding: 0 0 10px;
+}
+.dash-overdue__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--alert);
+}
+.dash-duelabel--alert {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--alert);
+  flex: none;
+}
+.dash-more-link {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  padding: 4px 0 0;
+}
+.priority-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.dash-nextup {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.dash-eyebrow-11 {
+  font-size: 11px;
+  font-weight: 700;
+}
+.dash-nextup__title {
+  font-size: 14px;
+  margin-top: 2px;
+}
+.dash-nextup__due {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  flex: none;
+}
+.dash-upcoming {
+  padding: 10px 0 6px;
+}
+.dash-upcoming-row {
+  opacity: 0.75;
+}
+.dash-checkbox-spacer {
+  width: 26px;
+}
+.dash-upcoming__due {
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+.dash-mealslink {
+  padding: 6px 0;
+}
+.dash-mealrow {
+  font-size: 13px;
+  padding: 3px 0;
+}
+.dash-mealrow__slot {
+  text-transform: capitalize;
+}
+.dash-viewlink {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  flex: none;
+  white-space: nowrap;
+}
+.dash-leftspend-label {
+  font-size: 12px;
+  margin-top: 6px;
+}
+.dash-groupbars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.dash-group-over {
+  font-weight: 700;
+}
+.dash-billrow {
+  padding: 6px 0;
+  font-size: 14px;
+}
+/* Featured "next bill" tile: the soonest unpaid bill gets real visual weight
+   instead of hiding in a list. Tint escalates with urgency — neutral surface a
+   week out, accent-soft at ≤3 days, alert-soft (the siren, reserved for real
+   trouble) once it's due today or overdue. */
+.dash-nextbill {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  margin-bottom: 4px;
+  transition: transform 0.15s var(--ease);
+}
+.dash-nextbill:active {
+  transform: scale(0.98);
+}
+.dash-nextbill--soon {
+  background: var(--accent-soft);
+}
+.dash-nextbill--soon .dash-nextbill__due,
+.dash-nextbill--soon .dash-nextbill__amt {
+  color: var(--accent);
+}
+.dash-nextbill--urgent {
+  background: var(--alert-soft);
+}
+.dash-nextbill--urgent .dash-nextbill__due,
+.dash-nextbill--urgent .dash-nextbill__amt {
+  color: var(--alert);
+}
+.dash-nextbill__body {
+  min-width: 0;
+}
+.dash-nextbill__name {
+  display: block;
+  font-weight: 700;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-nextbill__due {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.dash-nextbill__amt {
+  flex: none;
+  font-weight: 800;
+  font-size: 20px;
+}
+/* Tappable upcoming-bill row: jumps to that bill in Budget. The due chip
+   escalates with urgency (muted → accent-soft ≤3d → alert-soft overdue/today)
+   so a bill about to hit actually catches the eye instead of reading as one
+   more gray line. */
+.dash-billrow--tap {
+  width: 100%;
+  text-align: left;
+  border-radius: 10px;
+  padding: 7px 4px;
+  color: inherit;
+  transition: background 0.15s var(--ease);
+}
+.dash-billrow--tap:active {
+  background: var(--surface-2);
+}
+.dash-billrow__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-billrow__meta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-billrow__due {
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.dash-goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dash-habit-icon {
+  width: 30px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+.tile__value--success {
+  color: var(--success);
+}
+.dash-tile-suffix {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* ---- Settings ---- */
+.settings-connected-row {
+  padding: 2px 0 10px;
+}
+.settings-connected-label {
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.settings-card-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.settings-hint {
+  font-size: 13px;
+  margin-bottom: var(--sp-3);
+}
+.settings-hint--sm {
+  font-size: 12px;
+  margin-top: 6px;
+}
+.settings-setup-note {
+  background: var(--accent-soft);
+  font-size: 13px;
+}
+.settings-error {
+  font-size: 13px;
+  margin-top: 10px;
+}
+.lockgate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lockgate__lockwrap {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.lockgate__confetti {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: confettiBurst 0.65s ease-out forwards;
+}
+@keyframes confettiBurst {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+.lockgate__lock {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  border: 2px solid var(--hairline);
+  flex: none;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+/* A low-opacity white "film" over the whole latch, brightest just off-center
+   and fading toward the rim — reads as light diffusing through frosted glass
+   rather than a flat color swap, especially on top of the flashred/flashblue
+   states below. Present in every state (default, flashing, open) for a
+   consistent frosted look, not just while strobing. */
+.lockgate__lock::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.15) 60%, transparent 85%);
+  pointer-events: none;
+}
+.lockgate__lock:active {
+  transform: scale(0.92);
+}
+/* Police-light strobe while still locked — colors are fixed (not theme
+   tokens) on purpose, see LockGatedButton.tsx's doc comment. transition:
+   none keeps each flash a hard cut, not a fade, so it actually reads as a
+   strobe/siren rather than a soft pulse. */
+.lockgate__lock--flashred {
+  background: #ff1a1a;
+  border-color: #ff1a1a;
+  color: #fff;
+  box-shadow: 0 0 10px 2px rgba(255, 26, 26, 0.55);
+  transition: none;
+}
+.lockgate__lock--flashblue {
+  background: #1a4dff;
+  border-color: #1a4dff;
+  color: #fff;
+  box-shadow: 0 0 10px 2px rgba(26, 77, 255, 0.55);
+  transition: none;
+}
+.lockgate__lock--open {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: var(--success);
+  transform: scale(1.08);
+  animation: lockPop 0.4s var(--ease);
+}
+@keyframes lockPop {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  40% {
+    transform: scale(1.35) rotate(-10deg);
+  }
+  70% {
+    transform: scale(0.92) rotate(6deg);
+  }
+  100% {
+    transform: scale(1.08) rotate(0deg);
+  }
+}
+.lockgate__btn {
+  flex: 1;
+  opacity: 0.5;
+  transition: opacity 0.2s var(--ease);
+}
+.lockgate__btn--unlocked {
+  opacity: 1;
+  animation: btnPop 0.35s var(--ease);
+}
+@keyframes btnPop {
+  0% {
+    transform: scale(0.94);
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.lockgate__btn--shake {
+  animation: btnShake 0.4s var(--ease);
+}
+@keyframes btnShake {
+  10%,
+  90% {
+    transform: translateX(-1px);
+  }
+  20%,
+  80% {
+    transform: translateX(2px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-4px);
+  }
+  40%,
+  60% {
+    transform: translateX(4px);
+  }
+}
+.field--flush {
+  margin-bottom: 0;
+}
+.field__label--flush {
+  margin: 0;
+}
+.settings-name-input {
+  max-width: 240px;
+}
+.settings-currency-input {
+  width: 100px;
+}
+.settings-time-input {
+  width: 140px;
+}
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.chip--removable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip__remove {
+  display: flex;
+}
+.input--shrink {
+  min-width: 0;
+}
+.settings-list-empty {
+  font-size: 13px;
+  padding: 10px 0;
+}
+.settings-pin-note {
+  font-size: 12px;
+  padding: 10px 0;
+}
+.settings-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 10px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.settings-chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding-bottom: 10px;
+}
+.settings-sheet-note {
+  font-size: 13px;
+  margin-bottom: var(--sp-4);
+}
+.settings-navrow-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.hub-card__ico--sm {
+  width: 30px;
+  height: 30px;
+}
+.settings-checkbox {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+.settings-checkbox--sub {
+  flex: none;
+  margin-top: 3px;
+}
+.settings-footer {
+  text-align: center;
+  margin: 24px 0 8px;
+}
+.settings-footer__link {
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-checklist__sub {
+  font-size: 12px;
+}
+.settings-category-input {
+  width: 140px;
+  padding: 7px 12px;
+}
+.settings-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s var(--ease);
+}
+.settings-swatch:active {
+  transform: scale(0.9);
+}
+.settings-swatch--sm {
+  width: 14px;
+  height: 14px;
+  box-shadow: none;
+  border: 1px solid var(--hairline);
+}
+
+/* ---- Debt ---- */
+.debt-total-value {
+  font-weight: 800;
+  font-size: 22px;
+}
+.debt-order-num {
+  width: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ic-rotate-up {
+  transform: rotate(-90deg);
+}
+.ic-rotate-down {
+  transform: rotate(90deg);
+}
+.debt-row-btn {
+  background: none;
+  text-align: left;
+  flex: 1;
+}
+.debt-notes {
+  font-size: 12px;
+  margin-top: 2px;
+  font-style: italic;
+}
+.debt-actions {
+  display: flex;
+  gap: 6px;
+}
+.debt-schedule__head {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 0 6px;
+}
+.debt-col-month {
+  flex: 1;
+}
+.debt-col-amt {
+  width: 84px;
+  text-align: right;
+}
+.debt-col-bal {
+  width: 90px;
+  text-align: right;
+}
+.debt-schedule__row {
+  font-size: 13px;
+  padding: 7px 0;
+  border-top: 1px solid var(--hairline);
+}
+.debt-extra-row {
+  margin-top: 14px;
+}
+.debt-extra-input {
+  width: 110px;
+  text-align: right;
+}
+
+/* ---- Calendar ---- */
+.cal-navchip {
+  padding: 8px;
+}
+.cal-navchip--prev {
+  transform: scaleX(-1);
+}
+.cal-nav-title {
+  font-weight: 800;
+  font-size: 17px;
+}
+/* Padding 0 (not the default .card padding) so .cal-grid's own outline sits
+   flush against .card's outer outline — one continuous frame, not two
+   nested ones with a gap between. */
+.cal-monthcard {
+  margin-top: var(--sp-3);
+  padding: 0;
+  overflow: hidden;
+}
+.cal-item-repeat-ic {
+  flex: none;
+  opacity: 0.7;
+}
+.weekcard__pct {
+  font-size: 18px;
+  font-weight: 800;
+}
+.weekcard__pct-sub {
+  font-size: 10px;
+}
+.weekcard__empty {
+  font-size: 13px;
+  padding: 6px 0;
+}
+.cal-quickadd-gap {
+  margin-top: 6px;
+}
+.cal-hint {
+  font-size: 12px;
+  margin: 12px 2px;
+}
+.cal-daysheet__empty {
+  padding: 8px 0 16px;
+}
+.daydetail__count {
+  font-size: 28px;
+}
+.daydetail__pct {
+  font-size: 14px;
+  font-weight: 800;
+}
+.daydetail__empty {
+  font-size: 14px;
+  padding: 6px 0;
+}
+.daydetail__row-btn {
+  text-align: left;
+  background: none;
+}
+
+/* ---- Charts ---- */
+.chart-donut {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.chart-donut__ring {
+  position: relative;
+  flex: none;
+  border-radius: 50%;
+}
+.chart-donut__hole {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+.chart-donut__legend {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 120px;
+}
+.chart-donut__slice-label {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+}
+.chart-donut__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.chart-statusbar__track {
+  display: flex;
+  height: 12px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.chart-statusbar__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+}
+.chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.dot-9--accent {
+  background: var(--accent);
+}
+.dot-9--accent2 {
+  background: var(--accent-2);
+}
+.chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chart-groupedbars {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.chart-groupedbars__legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+}
+.chart-groupedbars__label {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.pbar__fill--budget {
+  background: var(--accent);
+}
+.pbar__fill--actual {
+  background: var(--accent-2);
+}
+.chart-columns {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.chart-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.chart-column__bar {
+  width: 100%;
+  max-width: 26px;
+  border-radius: 6px;
+  position: relative;
+}
+.chart-column__value {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.chart-column__label {
+  font-size: 9px;
+}
+.chart-stackedcolumns__legend {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.chart-stackedcolumns__bar {
+  width: 100%;
+  max-width: 26px;
+  display: flex;
+  flex-direction: column-reverse;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.chart-stackedcolumns__seg {
+  flex: none;
+}

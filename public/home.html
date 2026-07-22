@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task Tracker by ArtivicoLab</title>
+<meta name="description" content="Task Tracker is a dark-mode task tracker with recurring tasks and team assignees that syncs to a spreadsheet in your own Google Drive, on any device." />
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #2b2b3a;
+    background: #fbf7f1;
+    background-image: linear-gradient(180deg, #f7dfe1 0%, #f6e8de 40%, #ecebe0 70%, #d9e6f2 100%);
+    background-attachment: fixed;
+    padding: 48px 20px 80px;
+  }
+  main { max-width: 780px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .brand img { width: 56px; height: 56px; border-radius: 14px; }
+  .brand h1 { font-size: 30px; margin: 0; letter-spacing: -0.02em; }
+  .brand .by { color: #6c6276; font-size: 14px; }
+  .tagline { font-size: 20px; font-weight: 600; margin: 6px 0 22px; }
+  h2 { font-size: 20px; margin: 30px 0 8px; }
+  p, li { font-size: 16px; }
+  a { color: #b84c28; }
+  .card { background: #fdf8ef; border: 1px solid #eee2d6; border-radius: 16px; padding: 18px 20px; margin: 18px 0; }
+  .cta {
+    display: inline-block; margin: 8px 0; padding: 12px 22px; border-radius: 999px;
+    background: #b84c28; color: #fff; font-weight: 700; text-decoration: none;
+  }
+  ul { margin: 8px 0; padding-left: 22px; }
+  footer { margin-top: 42px; font-size: 14px; color: #6c6276; }
+  footer a { margin-right: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">
+    <img src="/android-icon-192x192.png" alt="Task Tracker logo" />
+    <div>
+      <h1>Task Tracker</h1>
+      <div class="by">by ArtivicoLab</div>
+    </div>
+  </div>
+
+  <p class="tagline">A dark-mode task tracker that lives in your own Google Sheet.</p>
+
+  <p>
+    Task Tracker is a phone-first web app that helps you organize tasks, recurring routines, and
+    who's doing what. It opens in any browser on your phone, tablet, or computer, works offline,
+    and can sync your data to a spreadsheet in your own Google Drive so you always own a backup.
+  </p>
+
+  <a class="cta" href="https://tasktracker.artivicolab.com">Open Task Tracker</a>
+
+  <h2>What you can do</h2>
+  <ul>
+    <li>Plan one-off and recurring tasks with priorities, status, and due dates</li>
+    <li>Assign tasks to team or household members with quick-pick chips</li>
+    <li>See live charts: status, category, priority, activity timeline, and who's carrying what</li>
+    <li>See everything on a month, week, and day calendar that fills every date</li>
+    <li>Quick-capture: type a task straight into any calendar day</li>
+  </ul>
+
+  <h2>How Task Tracker uses your Google account</h2>
+  <div class="card">
+    <p>
+      Connecting Google is optional. When you choose to connect, Task Tracker requests only the
+      <strong>Google Drive "drive.file"</strong> permission. This limits access to the
+      <strong>single spreadsheet the app creates for you</strong>, and nothing else in your Drive.
+    </p>
+    <p>
+      We use that access for one purpose: to save and sync your planner to that spreadsheet so it
+      is backed up and available across your devices. Your sign-in stays in your browser and talks
+      to Google directly from your device. ArtivicoLab operates no server and never receives,
+      stores, or sells your data. See our
+      <a href="/privacy.html">Privacy Policy</a> for the full details.
+    </p>
+  </div>
+
+  <h2>Your data stays yours</h2>
+  <p>
+    Everything works offline on your device first. If you connect Google, your data lives in a
+    spreadsheet in your own Google Drive that you can open, export, or delete any time. There is no
+    subscription, and connecting to Google Sheets is free.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+
+  <p><strong>Can Task Tracker see my other Google files or spreadsheets?</strong><br />
+  No. Task Tracker uses the Google "drive.file" permission, which lets it access only the single
+  spreadsheet it creates for you. It cannot see, open, or list anything else in your Google Drive.</p>
+
+  <p><strong>Where is my data stored?</strong><br />
+  On your device first, and in one spreadsheet in your own Google Drive once you connect Google.
+  There is no server of ours in between.</p>
+
+  <p><strong>Does ArtivicoLab have access to my data?</strong><br />
+  No. We run no server and never receive your data. Your planner talks to Google directly from your
+  browser, using your own Google account.</p>
+
+  <p><strong>Is there a subscription?</strong><br />
+  No. It is a one-time purchase with no monthly fees, and connecting to Google Sheets is free.</p>
+
+  <p><strong>Does it work offline?</strong><br />
+  Yes. Everything works offline on your device and syncs to your sheet when you are back online.</p>
+
+  <p><strong>What devices does it work on?</strong><br />
+  Any device with a modern browser: phone, tablet, or computer. You can also install it to your home
+  screen like an app.</p>
+
+  <p><strong>What happens if I disconnect or stop using it?</strong><br />
+  Your data stays in your own Google Sheet. Disconnecting only unlinks the app; it never deletes your
+  sheet. You can open, export, or delete that sheet yourself any time.</p>
+
+  <footer>
+    <a href="/privacy.html">Privacy Policy</a>
+    <a href="/terms.html">Terms of Service</a>
+    <a href="mailto:artivicolab@gmail.com">Contact</a>
+    <div style="margin-top:8px;">© ArtivicoLab</div>
+  </footer>
+</main>
+</body>
+</html>

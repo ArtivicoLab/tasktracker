@@ -1,0 +1,266 @@
+/* ============================================================
+   Design tokens — Task Tracker
+   Theme "Sticker Paper" (light, default) and "Sticker Club" (dark).
+
+   Art direction: 90s-shoujo sticker sheet — every featured element is a
+   die-cut sticker (a real ink outline + a HARD offset shadow in a sibling
+   candy color, no blur, slightly rotated), on a warm paper ground in light
+   mode and a true neon-on-void in dark mode. Both themes share the exact
+   same 5 candy hue families (pink/mint/lemon/cyan/grape) so light and dark
+   read as the same brand turned up or down, not two different apps.
+
+   Light was tuned specifically for eye strain: the dark theme's neon values
+   are correct AS neon (bright saturated color against near-black reads as
+   glowing, comfortable at low ambient brightness) but the SAME hex values
+   as large fills against a light paper ground would clash and fatigue the
+   eye. So in light mode every hue's "deep" (text-safe) tone was solved for
+   real WCAG contrast against white (~4.5:1, see the contrast-solver notes
+   below) rather than picked by eye, and big solid-candy fills from the
+   original spec were converted to accents (outline + top bar + pop shadow
+   on a white/cream card) instead of full-bleed saturated color, which is
+   the same-family look at a lower, longer-reading-session volume.
+   Selected via data-theme on <html>; "auto" follows OS.
+   ============================================================ */
+
+:root {
+  /* ---- Category hues (5 fixed defaults, shared, tuned per theme below) ----
+     Mid tone = dot/donut-segment fill, sticker top-bar, small accents. Soft
+     = pill/tinted-panel background. Deep = pill text and anything rendered
+     AS text/icon color — solved for ≥4.5:1 against white/cream in light
+     mode; the lightened, saturated version in dark mode (same pattern the
+     dark theme below already used before this pass). Category assignment,
+     lib/ui.ts's FIXED map: Home=pink, Health=mint(teal), Finance=lemon
+     (butter), Work=cyan(sky), Growth=grape(lavender). */
+  --cat-pink: #f56695;
+  --cat-pink-soft: #f7e9ed;
+  --cat-pink-deep: #e60f56;
+  --cat-teal: #55e7bb;
+  --cat-teal-soft: #e9f7f2;
+  --cat-teal-deep: #138663;
+  --cat-butter: #fbcc60;
+  --cat-butter-soft: #f7f2e9;
+  --cat-butter-deep: #9a6d04;
+  --cat-sky: #5cc7f5;
+  --cat-sky-soft: #e9f2f7;
+  --cat-sky-deep: #0b7cad;
+  --cat-lavender: #ba8eeb;
+  --cat-lavender-soft: #f2edf8;
+  --cat-lavender-deep: #7023c7;
+  /* Reserved for user-created custom categories (hash-assigned, see
+     EXTENDED_PASTELS in lib/ui.ts) — a separate pool so a custom category
+     never collides with one of the 5 defaults above. Same candy family,
+     filling the hue-wheel gaps the 5 defaults leave; used as plain dot/tag
+     fills only (no FIXED_SOFT/DEEP entry), so these skip the contrast-solve
+     the 5 defaults got above. */
+  --cat-mint: #7fe896;
+  --cat-rose: #f599c2;
+  --cat-gold: #f5b563;
+  --cat-plum: #d98ce0;
+  --cat-steel: #7fa8f0;
+  --cat-clay: #f58f6b;
+
+  /* ---- Priority ramp — the category mid-tones reused in a fixed order
+     (VeryHigh gets the DEEP pink for extra weight at the top of the
+     scale), never a separate palette. ---- */
+  --pri-verylow: var(--cat-sky);
+  --pri-low: var(--cat-teal);
+  --pri-medium: var(--cat-butter);
+  --pri-high: var(--cat-pink);
+  --pri-veryhigh: var(--cat-pink-deep);
+
+  /* ---- Radii ---- */
+  --r-card: 20px;
+  --r-input: 13px;
+  --r-pill: 100px;
+
+  /* ---- Spacing scale ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* ---- Type ----
+     Titan One is the "sticker" display face — chunky, extruded, used ONLY
+     for headline moments (screen titles, hero greeting, KPI/ring numerals,
+     card names, sidebar brand), never body copy. Baloo 2 is the everyday
+     UI/body face — a real, legible rounded-terminal sans (not a novelty
+     font), carrying the "friendly" half of the personality everywhere else.
+     Both are Google Fonts loaded in index.html — this app has no CSP
+     blocking external font fetches, and the chunky-extrude look this pass
+     is built around has no system-font equivalent. */
+  --font: "Baloo 2", ui-rounded, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, system-ui, sans-serif;
+  --font-display: "Titan One", "Baloo 2", ui-rounded, cursive, sans-serif;
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 300ms;
+
+  /* ---- Safe-area (iOS notch / home indicator) ---- */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---------- Sticker Paper (light), the default theme — also the bare :root
+   fallback so first paint (before JS applies data-theme) is light, not a
+   dark flash. Warm cream paper, white sticker-card surfaces, a soft dark
+   plum ink (not pure black — a flat #000 outline on every card at this
+   density reads harsher/more fatiguing over a long session than a warm
+   near-black). Mint is the primary accent/brand; pink is reserved for
+   alert/urgency so it reads as a signal, not the app's dominant hue. ---------- */
+:root,
+:root[data-theme="light"] {
+  --bg: #fff8ef;
+  --bg-grad: linear-gradient(180deg, #fffbf6 0%, #fff8ef 100%);
+  --surface: #ffffff;
+  --surface-2: #f7eee3;
+  --ink: #2a2140;
+  --outline: #2a2140;
+  --muted: #8b7d91;
+  --muted-2: #c0b4c4;
+  --hairline: #f0e4d6;
+  --accent: #138663;
+  --accent-2: #0b7cad;
+  --accent-soft: #e9f7f2;
+  --success: #138663;
+  --success-soft: #e9f7f2;
+  --alert: #e60f56;
+  --alert-soft: #f7e9ed;
+  --warn: #9a6d04;
+  --warn-soft: #f7f2e9;
+  --shadow: 0 2px 14px rgba(42, 33, 64, 0.08);
+  --shadow-sm: 0 1px 8px rgba(42, 33, 64, 0.06);
+  --scrim: rgba(42, 33, 64, 0.32);
+  /* Hard "pop" shadow colors for featured stickers (KPI/alert highlights,
+     FAB, active nav, recurring cards) — the mid-tone at a moderate alpha,
+     paired to a SIBLING hue at each use site (pink throws a cyan/lemon
+     shadow, never its own color), per the shadow-pairing rule below. Lower
+     alpha than dark mode on purpose — a hard-edge color shadow at full
+     opacity reads as neon glow on void, but as a harsh smear on paper. */
+  --pop-pink: rgba(245, 102, 149, 0.55);
+  --pop-mint: rgba(85, 231, 187, 0.55);
+  --pop-lemon: rgba(251, 204, 96, 0.6);
+  --pop-cyan: rgba(92, 199, 245, 0.55);
+  --pop-grape: rgba(186, 142, 235, 0.55);
+  --grain-opacity: 0.1;
+  color-scheme: light;
+}
+
+/* ---------- Sticker Club (dark) — opt-in via Settings, not the default. A
+   true void (near-black, not navy) with full-saturation neon candy — this
+   is the reference image's own palette almost verbatim; at low ambient
+   light, saturated color against near-black reads as glowing rather than
+   harsh, so it doesn't need the light theme's contrast-solved softening. ---------- */
+:root[data-theme="dark"] {
+  --bg: #0e0c12;
+  --bg-grad: linear-gradient(180deg, #15121b 0%, #0e0c12 55%, #09070c 100%);
+  --surface: #16131d;
+  --surface-2: #201b2a;
+  --ink: #fff6ec;
+  --outline: #1a1420;
+  --muted: #b9aecb;
+  --muted-2: #6e6382;
+  --hairline: #2a2335;
+  --accent: #6bf0c4;
+  --accent-2: #6bd9ff;
+  --accent-soft: #143a32;
+  --success: #6bf0c4;
+  --success-soft: #133a2e;
+  --alert: #ff5ca8;
+  --alert-soft: #3d1e2c;
+  --warn: #ffe94a;
+  --warn-soft: #3d3316;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --scrim: rgba(0, 0, 0, 0.65);
+  --pop-pink: rgba(255, 92, 168, 0.8);
+  --pop-mint: rgba(107, 240, 196, 0.75);
+  --pop-lemon: rgba(255, 233, 74, 0.75);
+  --pop-cyan: rgba(107, 217, 255, 0.75);
+  --pop-grape: rgba(180, 139, 255, 0.75);
+  --grain-opacity: 0.35;
+  color-scheme: dark;
+
+  --cat-pink: #ff5ca8;
+  --cat-pink-soft: #3d1e2c;
+  --cat-pink-deep: #ffb8d6;
+  --cat-teal: #6bf0c4;
+  --cat-teal-soft: #133a2e;
+  --cat-teal-deep: #b9fbe3;
+  --cat-butter: #ffe94a;
+  --cat-butter-soft: #3d3316;
+  --cat-butter-deep: #fff3a0;
+  --cat-sky: #6bd9ff;
+  --cat-sky-soft: #163445;
+  --cat-sky-deep: #bfeeff;
+  --cat-lavender: #b48bff;
+  --cat-lavender-soft: #2a2140;
+  --cat-lavender-deep: #dcc8ff;
+
+  --cat-mint: #8ce86b;
+  --cat-rose: #ff8fc4;
+  --cat-gold: #ffc14a;
+  --cat-plum: #ff6be0;
+  --cat-steel: #6b9fff;
+  --cat-clay: #ff9560;
+}
+
+/* Follow OS when data-theme="auto" (or unset by app boot) */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    --bg: #0e0c12;
+    --bg-grad: linear-gradient(180deg, #15121b 0%, #0e0c12 55%, #09070c 100%);
+    --surface: #16131d;
+    --surface-2: #201b2a;
+    --ink: #fff6ec;
+    --outline: #1a1420;
+    --muted: #b9aecb;
+    --muted-2: #6e6382;
+    --hairline: #2a2335;
+    --accent: #6bf0c4;
+    --accent-2: #6bd9ff;
+    --accent-soft: #143a32;
+    --success: #6bf0c4;
+    --success-soft: #133a2e;
+    --alert: #ff5ca8;
+    --alert-soft: #3d1e2c;
+    --warn: #ffe94a;
+    --warn-soft: #3d3316;
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.4);
+    --scrim: rgba(0, 0, 0, 0.65);
+    --pop-pink: rgba(255, 92, 168, 0.8);
+    --pop-mint: rgba(107, 240, 196, 0.75);
+    --pop-lemon: rgba(255, 233, 74, 0.75);
+    --pop-cyan: rgba(107, 217, 255, 0.75);
+    --pop-grape: rgba(180, 139, 255, 0.75);
+    --grain-opacity: 0.35;
+    color-scheme: dark;
+
+    --cat-pink: #ff5ca8;
+    --cat-pink-soft: #3d1e2c;
+    --cat-pink-deep: #ffb8d6;
+    --cat-teal: #6bf0c4;
+    --cat-teal-soft: #133a2e;
+    --cat-teal-deep: #b9fbe3;
+    --cat-butter: #ffe94a;
+    --cat-butter-soft: #3d3316;
+    --cat-butter-deep: #fff3a0;
+    --cat-sky: #6bd9ff;
+    --cat-sky-soft: #163445;
+    --cat-sky-deep: #bfeeff;
+    --cat-lavender: #b48bff;
+    --cat-lavender-soft: #2a2140;
+    --cat-lavender-deep: #dcc8ff;
+
+    --cat-mint: #8ce86b;
+    --cat-rose: #ff8fc4;
+    --cat-gold: #ffc14a;
+    --cat-plum: #ff6be0;
+    --cat-steel: #6b9fff;
+    --cat-clay: #ff9560;
+  }
+}
