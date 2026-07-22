@@ -6,10 +6,22 @@ import { HelpTip } from "../../components/HelpTip";
 import { IconRepeat } from "../../components/icons";
 import { TaskSheet } from "../tasks/TaskSheet";
 import { useTasks } from "../../stores/useTasks";
+import { useSettings } from "../../stores/useSettings";
 import { expandOccurrences } from "../../lib/recurrence";
 import { addDaysISO, dayNum, dueLabel, daysBetween, todayISO, weekdayShort } from "../../lib/dates";
-import { categoryColor, categoryPillBg, categoryPillInk, frequencyLabel } from "../../lib/ui";
-import type { Frequency, Recurrence, Task } from "../../lib/types";
+import { categoryColor, categoryPillBg, categoryPillInk, frequencyLabel, PRIORITY_COLOR, PRIORITY_LABEL } from "../../lib/ui";
+import { PRIORITIES, type Frequency, type Priority, type Recurrence, type Task } from "../../lib/types";
+
+type RecSort = "next" | "priority" | "name" | "category";
+const REC_SORTS: { value: RecSort; label: string }[] = [
+  { value: "next", label: "Next occurrence" },
+  { value: "priority", label: "Priority" },
+  { value: "category", label: "Category" },
+  { value: "name", label: "Name" },
+];
+const REC_PRI_RANK: Record<Priority, number> = {
+  VeryHigh: 0, High: 1, Medium: 2, Low: 3, VeryLow: 4,
+};
 
 /* Nominal cycle length in days — drives the cycle ring's fill fraction.
    Months/years use calendar-ish approximations; the ring is a *feel* for how
@@ -56,10 +68,17 @@ export function RecurringScreen() {
     updateRecurrence,
     deleteRecurrence,
   } = useTasks();
+  const { categories } = useSettings();
 
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<Recurrence | null>(null);
+
+  const [catFilter, setCatFilter] = useState("");
+  const [priFilter, setPriFilter] = useState<Priority | "">("");
+  const [assigneeFilter, setAssigneeFilter] = useState("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "paused">("all");
+  const [sort, setSort] = useState<RecSort>("next");
 
   const today = todayISO();
   const horizon = addDaysISO(today, 120);
@@ -73,7 +92,39 @@ export function RecurringScreen() {
     return map;
   }, [tasks]);
 
-  const series = [...recurrences].sort((a, b) => (a.active === b.active ? 0 : a.active ? -1 : 1));
+  const catsForFilter = useMemo(() => {
+    const seen = new Set(categories);
+    const extra = recurrences.map((r) => r.category).filter((c) => c && !seen.has(c));
+    return [...categories, ...new Set(extra)];
+  }, [categories, recurrences]);
+
+  const assignees = useMemo(
+    () => Array.from(new Set(recurrences.map((r) => r.assignee).filter(Boolean))).sort(),
+    [recurrences]
+  );
+
+  const series = useMemo(() => {
+    const filtered = recurrences.filter((r) => {
+      if (catFilter && r.category !== catFilter) return false;
+      if (priFilter && r.priority !== priFilter) return false;
+      if (assigneeFilter && r.assignee !== assigneeFilter) return false;
+      if (activeFilter === "active" && !r.active) return false;
+      if (activeFilter === "paused" && r.active) return false;
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      if (a.active !== b.active) return a.active ? -1 : 1;
+      if (sort === "priority") return REC_PRI_RANK[a.priority] - REC_PRI_RANK[b.priority];
+      if (sort === "name") return a.title.localeCompare(b.title);
+      if (sort === "category") return a.category.localeCompare(b.category);
+      const na = expandOccurrences(a, today, horizon)[0];
+      const nb = expandOccurrences(b, today, horizon)[0];
+      if (na && nb) return na < nb ? -1 : na > nb ? 1 : 0;
+      if (na) return -1;
+      if (nb) return 1;
+      return 0;
+    });
+  }, [recurrences, catFilter, priFilter, assigneeFilter, activeFilter, sort, today, horizon]);
 
   function openOccurrence(rec: Recurrence, date: string) {
     const task = materialize(rec.id, date);
@@ -91,12 +142,77 @@ export function RecurringScreen() {
         </h1>
       </div>
 
-      {series.length === 0 ? (
+      {recurrences.length > 0 && (
+        <div data-tour="recurring-filters">
+          <div className="chip-row mt-3">
+            <button className={`chip${!activeFilter || activeFilter === "all" ? " chip--on" : ""}`} onClick={() => setActiveFilter("all")}>
+              All
+            </button>
+            <button className={`chip${activeFilter === "active" ? " chip--on" : ""}`} onClick={() => setActiveFilter("active")}>
+              Active only
+            </button>
+            <button className={`chip${activeFilter === "paused" ? " chip--on" : ""}`} onClick={() => setActiveFilter("paused")}>
+              Paused only
+            </button>
+          </div>
+          {catsForFilter.length > 0 && (
+            <div className="chip-row">
+              <button className={`chip${!catFilter ? " chip--on" : ""}`} onClick={() => setCatFilter("")}>
+                All categories
+              </button>
+              {catsForFilter.map((c) => (
+                <button key={c} className={`chip${catFilter === c ? " chip--on" : ""}`} onClick={() => setCatFilter(catFilter === c ? "" : c)}>
+                  <span className="dot-9 dot-9--round" style={{ background: categoryColor(c) }} />
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="chip-row">
+            <button className={`chip${!priFilter ? " chip--on" : ""}`} onClick={() => setPriFilter("")}>
+              All priorities
+            </button>
+            {PRIORITIES.map((p) => (
+              <button key={p} className={`chip${priFilter === p ? " chip--on" : ""}`} onClick={() => setPriFilter(priFilter === p ? "" : p)}>
+                <span className="dot-9 dot-9--round" style={{ background: PRIORITY_COLOR[p] }} />
+                {PRIORITY_LABEL[p]}
+              </button>
+            ))}
+          </div>
+          {assignees.length > 0 && (
+            <div className="chip-row">
+              <button className={`chip${!assigneeFilter ? " chip--on" : ""}`} onClick={() => setAssigneeFilter("")}>
+                Anyone
+              </button>
+              {assignees.map((a) => (
+                <button key={a} className={`chip${assigneeFilter === a ? " chip--on" : ""}`} onClick={() => setAssigneeFilter(assigneeFilter === a ? "" : a)}>
+                  {a}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="filterbar" style={{ marginTop: 10 }}>
+            <select className="input input--sm" aria-label="Sort routines by" value={sort} onChange={(e) => setSort(e.target.value as RecSort)}>
+              {REC_SORTS.map((o) => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {recurrences.length === 0 ? (
         <div className="card">
           <EmptyState
             icon={<IconRepeat size={28} />}
             title="No routines yet"
             sub="Create a task with a Repeat option and it shows up here, with every upcoming occurrence."
+          />
+        </div>
+      ) : series.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            icon={<IconRepeat size={28} />}
+            title="Nothing matches these filters"
+            sub="Try clearing a filter above."
           />
         </div>
       ) : (

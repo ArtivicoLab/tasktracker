@@ -10,11 +10,11 @@ export const SCOPE_CALENDAR = "https://www.googleapis.com/auth/calendar.events";
 // only ever tries a silent, prompt:"none" request). Google's silent flow only
 // succeeds for a scope the account has already granted this client_id, so
 // without this, calendar.events is never actually granted and every
-// reminder/Calendar sync (task reminders, bill reminders, the daily digest)
-// silently no-ops forever — confirmed 2026-07-13 as the reason the budget
-// bell toggle "did nothing": it flips locally, but createEvent's token
-// request fails silently every time. Requesting the combined scope here
-// covers both APIs off one consent screen.
+// reminder/Calendar sync (task reminders, the daily digest) silently no-ops
+// forever — confirmed 2026-07-13 as the reason a reminder bell toggle "did
+// nothing": it flips locally, but createEvent's token request fails
+// silently every time. Requesting the combined scope here covers both
+// APIs off one consent screen.
 export const SCOPE_SHEETS_AND_CALENDAR = `${SCOPE_SHEETS} ${SCOPE_CALENDAR}`;
 
 export const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
@@ -46,7 +46,7 @@ const tokenCache = new Map<string, TokenState>();
 // scoped to this tab/session, gone when the tab closes — same practical
 // exposure as keeping it in a JS variable) so a reload can revive a still-
 // valid token instead of discarding it.
-const SESSION_KEY_PREFIX = "lp.token.";
+const SESSION_KEY_PREFIX = "tt.token.";
 
 function persistToken(scope: string, entry: TokenState) {
   try {

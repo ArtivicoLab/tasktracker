@@ -44,7 +44,7 @@ export function decideReminderAction(
 }
 
 /** Swallow anything that goes wrong — a reminder is a nice-to-have, never a
-    reason to fail the task/bill save that triggered it. */
+    reason to fail the task save that triggered it. */
 async function guard<T>(fn: () => Promise<T>): Promise<T | undefined> {
   try {
     return await fn();
@@ -89,7 +89,7 @@ export async function syncTaskReminder(
  */
 /**
  * Best-effort delete of a lingering Calendar event for something that's being
- * deleted outright (task/bill/materialized occurrence) — not a reminder
+ * deleted outright (task/materialized occurrence) — not a reminder
  * turn-off, just cleanup so it doesn't outlive the row it belonged to.
  */
 export async function cancelReminder(calendarEventId: string): Promise<void> {

@@ -1,5 +1,5 @@
-// Mobile "More" hub — a grouped grid of every module (matches the reference's
-// Overview / Organization / Finances / Wellness sections).
+// Mobile "More" hub — a grouped grid of every destination not already on
+// the tab bar.
 import { navigate } from "../../router";
 import { NAV } from "../../nav";
 import { HelpTip } from "../../components/HelpTip";

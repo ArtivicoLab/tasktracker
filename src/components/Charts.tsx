@@ -93,77 +93,10 @@ export function StatusBar({ segments }: { segments: Slice[] }) {
   );
 }
 
-export interface BarDatum {
-  label: string;
-  value: number;
-  color?: string;
-}
-
-/** Horizontal comparison bars (budget vs actual style). */
-export function Bars({ data, max }: { data: BarDatum[]; max?: number }) {
-  const top = max ?? Math.max(1, ...data.map((d) => d.value));
-  return (
-    <div className="chart-bars">
-      {data.map((d) => (
-        <div key={d.label}>
-          <div className="spread row-label-12">
-            <span className="muted">{d.label}</span>
-          </div>
-          <div className="pbar" role="img" aria-label={`${d.label}: ${d.value}`}>
-            <div
-              className="pbar__fill"
-              style={{
-                width: `${Math.min(100, (d.value / top) * 100)}%`,
-                background: d.color ?? "var(--accent)",
-              }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export interface GroupedDatum {
-  label: string;
-  budget: number;
-  actual: number;
-}
-
-/** Paired horizontal bars per category — "Budget vs Actual" style comparisons. */
-export function GroupedBars({ data }: { data: GroupedDatum[] }) {
-  const top = Math.max(1, ...data.flatMap((d) => [d.budget, d.actual]));
-  return (
-    <div className="chart-groupedbars">
-      <div className="chart-groupedbars__legend">
-        <span className="chart-legend-item">
-          <span className="dot-9 dot-9--accent" />
-          <span className="muted">Budget</span>
-        </span>
-        <span className="chart-legend-item">
-          <span className="dot-9 dot-9--accent2" />
-          <span className="muted">Actual</span>
-        </span>
-      </div>
-      {data.map((d) => (
-        <div key={d.label}>
-          <div className="chart-groupedbars__label">{d.label}</div>
-          <div className="pbar mb-1" role="img" aria-label={`${d.label} budget: ${d.budget}`}>
-            <div className="pbar__fill pbar__fill--budget" style={{ width: `${Math.min(100, (d.budget / top) * 100)}%` }} />
-          </div>
-          <div className="pbar" role="img" aria-label={`${d.label} actual: ${d.actual}`}>
-            <div className="pbar__fill pbar__fill--actual" style={{ width: `${Math.min(100, (d.actual / top) * 100)}%` }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /**
- * Vertical column trend (weight over time, daily % completion, etc). CSS
+ * Vertical column trend (daily % completion, etc). CSS
  * columns, JS-normalized. Pass `min`/`max` for a fixed domain (e.g. 0–100 for
- * percentages) — omit them to auto-scale to the data's own range (e.g. weight).
+ * percentages) — omit them to auto-scale to the data's own range (e.g. counts).
  * Auto-scaling means a bar's HEIGHT is only ever relative to the busiest point
  * in `points`, not an absolute count — a single logged item on an otherwise
  * empty week renders as a "full" bar exactly like 10 items would. That's

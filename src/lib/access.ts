@@ -30,7 +30,7 @@ export function isValidAccessCode(code: string): boolean {
 
 // ---- brute-force throttle ----
 
-const LS_THROTTLE = "lp.unlockThrottle";
+const LS_THROTTLE = "tt.unlockThrottle";
 const FREE_ATTEMPTS = 5; // no lockout for the first few — real buyers mistype
 const FIRST_LOCK_MS = 30_000; // 30s, just the 6th attempt
 const HOUR_MS = 60 * 60_000;

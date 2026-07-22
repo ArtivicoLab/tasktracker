@@ -25,6 +25,8 @@ import {
 import { categoryColor, categoryPillBg, categoryPillInk, PRIORITY_COLOR, PRIORITY_LABEL, STATUS_COLOR, STATUS_LABEL } from "../../lib/ui";
 import { PRIORITIES, STATUSES, type Occurrence, type Priority, type Recurrence, type Status, type Task } from "../../lib/types";
 
+const NON_COMPLETED_STATUSES = STATUSES.filter((s) => s !== "Completed");
+
 type View = "month" | "week" | "day";
 const VIEWS = [
   { value: "month" as View, label: "Month" },
@@ -114,9 +116,31 @@ export function CalendarScreen() {
   // filters: which categories/statuses are HIDDEN (matches "do not show")
   const [hiddenCat, setHiddenCat] = useState<Set<string>>(new Set());
   const [hiddenStatus, setHiddenStatus] = useState<Set<Status>>(new Set());
+  // Derived from hiddenStatus, not separate state, so this shortcut and the
+  // individual status chips below always agree — setting either updates the
+  // exact same underlying set.
+  const quickView: "all" | "completed" | "incomplete" | "custom" =
+    hiddenStatus.size === 0 ? "all"
+    : hiddenStatus.size === 1 && hiddenStatus.has("Completed") ? "incomplete"
+    : NON_COMPLETED_STATUSES.every((st) => hiddenStatus.has(st)) && hiddenStatus.size === NON_COMPLETED_STATUSES.length ? "completed"
+    : "custom";
+  function setQuickView(v: "all" | "completed" | "incomplete") {
+    setHiddenStatus(
+      v === "all" ? new Set()
+      : v === "incomplete" ? new Set(["Completed"])
+      : new Set(NON_COMPLETED_STATUSES)
+    );
+  }
   // assignee/priority: "show only" filters
   const [assigneeFilter, setAssigneeFilter] = useState<string>("");
   const [priFilter, setPriFilter] = useState<Priority | "">("");
+
+  // Week view normally shows the Sun/Mon-aligned week containing `cursor`
+  // (per Settings' weekStart). Setting this overrides that alignment so the
+  // visible week starts on literally any chosen date instead — cleared by
+  // picking a nearby day off the month strip, which is a "back to normal
+  // browsing" action.
+  const [customWeekStart, setCustomWeekStart] = useState("");
 
   // inline "write straight in the cell/day"
   const [addingDate, setAddingDate] = useState<string | null>(null);
@@ -135,14 +159,19 @@ export function CalendarScreen() {
   }, []);
 
   const today = todayISO();
-  const weekDays = weekDaysISO(cursor, weekStart);
+  const alignedWeekDays = weekDaysISO(cursor, weekStart);
+  const weekDays = customWeekStart
+    ? Array.from({ length: 7 }, (_, i) => addDaysISO(customWeekStart, i))
+    : alignedWeekDays;
   const days =
     view === "month" ? monthGridISO(cursor, weekStart)
     : view === "week" ? weekDays
     : [cursor];
   const winStart = days[0];
   const winEnd = days[days.length - 1];
-  const weekHeader = weekDays.map((d) => weekdayShort(d));
+  // Month view's own weekday-column header is always Sun/Mon-aligned per
+  // Settings, regardless of any custom week-start override active in Week view.
+  const weekHeader = alignedWeekDays.map((d) => weekdayShort(d));
 
   const byDate = useMemo(() => {
     const map = new Map<string, CalItem[]>();
@@ -273,12 +302,21 @@ export function CalendarScreen() {
     return n;
   };
 
-  const navBy = (dir: number) =>
+  const navBy = (dir: number) => {
+    // A custom week-start override is its own anchor — shift IT by a week
+    // instead of shifting cursor and re-aligning back to Sun/Mon.
+    if (view === "week" && customWeekStart) {
+      const next = addDaysISO(customWeekStart, dir * 7);
+      setCustomWeekStart(next);
+      setCursor(next);
+      return;
+    }
     setCursor(
       view === "month" ? addMonthsISO(cursor, dir)
       : view === "week" ? addDaysISO(cursor, dir * 7)
       : addDaysISO(cursor, dir)
     );
+  };
   const title =
     view === "month"
       ? monthTitle(cursor)
@@ -299,8 +337,19 @@ export function CalendarScreen() {
       <Segmented options={VIEWS} value={view} onChange={setView} />
 
       <div data-tour="calendar-filters">
+        <div className="chip-row mt-3">
+          <button className={`chip${quickView === "all" ? " chip--on" : ""}`} onClick={() => setQuickView("all")}>
+            All
+          </button>
+          <button className={`chip${quickView === "completed" ? " chip--on" : ""}`} onClick={() => setQuickView("completed")}>
+            Completed only
+          </button>
+          <button className={`chip${quickView === "incomplete" ? " chip--on" : ""}`} onClick={() => setQuickView("incomplete")}>
+            Incomplete only
+          </button>
+        </div>
         {catsForFilter.length > 0 && (
-          <div className="chip-row mt-3">
+          <div className="chip-row">
             {catsForFilter.map((c) => {
               const on = !hiddenCat.has(c);
               return (
@@ -389,6 +438,29 @@ export function CalendarScreen() {
       )}
 
       {view === "week" && (
+        <div className="mt-3" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <label className="muted" style={{ fontSize: 13, display: "inline-flex", alignItems: "center", gap: 6 }}>
+            Week starts
+            <input
+              type="date"
+              className="input input--sm"
+              value={customWeekStart}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCustomWeekStart(v);
+                if (v) setCursor(v);
+              }}
+            />
+          </label>
+          {customWeekStart && (
+            <button className="chip" onClick={() => setCustomWeekStart("")}>
+              Reset to {weekStart === 1 ? "Monday" : "Sunday"}-start
+            </button>
+          )}
+        </div>
+      )}
+
+      {view === "week" && (
         /* Month strip — jump to any nearby day without leaving week view;
            each date carries a pip in that day's dominant category color
            (real data — most-common category due that day), so the strip
@@ -408,7 +480,7 @@ export function CalendarScreen() {
                   className={`monthstrip__day${active ? " monthstrip__day--on" : ""}`}
                   aria-label={format(fromISO(d), "MMMM d")}
                   aria-current={active ? "date" : undefined}
-                  onClick={() => setCursor(d)}
+                  onClick={() => { setCursor(d); setCustomWeekStart(""); }}
                 >
                   <span className="monthstrip__dd">{weekdayShort(d).slice(0, 1)}</span>
                   {fromISO(d).getDate()}

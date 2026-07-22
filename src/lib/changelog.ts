@@ -14,26 +14,13 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
-    version: "1.1.0",
-    date: "2026-07-12",
-    title: "A friendlier tour, roomier calendar, and quality-of-life fixes",
-    items: [
-      "The coach tour box can now be moved: drag the little handle at the top.",
-      "You can now go Back in the tour, not just forward.",
-      "The tour now includes a Sample data / My data switch so you can explore with examples even before adding anything of your own.",
-      "Calendar day boxes are bigger and easier to read and tap.",
-      "New app icon, and a clear Demo badge whenever you're viewing sample data.",
-      "The Connect button now clearly shows when it's locked until you enter your code.",
-      "Fixed text overlapping on the dashboard on mid-size screens.",
-      "Scrollbars now match the app's theme in light and dark.",
-    ],
-  },
-  {
     version: "1.0.0",
-    date: "2026-07-06",
+    date: "2026-07-21",
     title: "Hello, world",
     items: [
-      "First release: tasks, recurring routines, calendar, habits, goals, time blocking, budget, savings, debt payoff, meals, grocery, fitness, weight, and hydration, all in one planner.",
+      "First release: tasks, recurring routines, and a Weekly/Monthly calendar, all in one tracker.",
+      "Assign tasks to people on your team, and see who's covering what at a glance.",
+      "A Smart Task Center dashboard: KPIs, status/category/priority breakdowns, and an activity timeline.",
       "Optional sync to a spreadsheet in your own Google Drive: your data stays yours.",
       "Works offline, on any device, straight from the browser.",
     ],

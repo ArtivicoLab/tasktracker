@@ -1354,23 +1354,6 @@ textarea.input {
   color: var(--accent);
 }
 
-/* ---------- Progress bar ---------- */
-.pbar {
-  height: 10px;
-  border-radius: var(--r-pill);
-  background: var(--surface-2);
-  overflow: hidden;
-}
-.pbar__fill {
-  height: 100%;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  transition: width 0.5s var(--ease);
-}
-.pbar__fill--over {
-  background: var(--alert);
-}
-
 /* ---------- Empty state ---------- */
 .empty {
   text-align: center;
@@ -1449,9 +1432,6 @@ textarea.input {
 }
 .row--pad8 {
   padding: 8px 0;
-}
-.row--clickable {
-  cursor: pointer;
 }
 .row__title--sm {
   font-size: 14px;
@@ -1984,8 +1964,17 @@ textarea.input {
   /* Each day column is at least 140px (readable + tappable); grows to fill wide
      screens. When 7×140 exceeds the viewport, the .cal-scroll wrapper scrolls. */
   grid-template-columns: repeat(7, minmax(140px, 1fr));
-  gap: 2px;
-  background: var(--outline);
+  /* Grid lines used to be a 2px gap + this container's background peeking
+     through (no per-cell border at all) — reliable when everything's
+     visible at once, but the peek-through only got painted for whichever
+     rows happened to be in view at the moment; scrolling .cal-scroll
+     sideways left most horizontal lines never (re)painted, while the
+     vertical ones (same column, always in view) looked fine (reported
+     directly, 2026-07-21, with a screenshot: solid verticals, missing
+     horizontals while scrolled). Real borders on every cell below don't
+     have that failure mode — each cell paints its own edge regardless of
+     what's scrolled in or out. */
+  gap: 0;
 }
 .cal-head {
   text-align: center;
@@ -1999,6 +1988,7 @@ textarea.input {
   letter-spacing: 0.02em;
   color: var(--ink);
   background: var(--surface-2);
+  border: 1px solid var(--outline);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2011,6 +2001,7 @@ textarea.input {
   flex-direction: column;
   gap: 3px;
   overflow: hidden;
+  border: 1px solid var(--outline);
 }
 .cal-cell--week {
   min-height: 200px;
@@ -2154,137 +2145,6 @@ textarea.input {
   }
 }
 
-/* ---------- Time blocking (slot rows) ---------- */
-.tb-slot {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-}
-.tb-slot + .tb-slot {
-  border-top: 1px solid var(--hairline);
-}
-.tb-time {
-  width: 74px;
-  flex: none;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.tb-dot {
-  width: 26px;
-  height: 26px;
-  flex: none;
-  border-radius: 50%;
-  border: 2px dashed var(--hairline);
-}
-.tb-item {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: var(--surface-2);
-  border: 1.5px solid transparent;
-}
-.tb-item:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: var(--surface);
-}
-.tb-slot--done .tb-item {
-  text-decoration: line-through;
-  color: var(--muted);
-}
-
-/* ---------- Habits: Month analytics view ---------- */
-.hmv-weeks {
-  display: flex;
-  gap: var(--sp-3);
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
-}
-.hmv-weeks::-webkit-scrollbar {
-  display: none;
-}
-.hmv-week {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: none;
-}
-.hmv-scroll {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.hmv-grid {
-  border-collapse: collapse;
-  font-size: 11px;
-}
-.hmv-grid th,
-.hmv-grid td {
-  padding: 2px;
-  text-align: center;
-}
-.hmv-grid th {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 10px;
-}
-.hmv-grid__habit {
-  text-align: left !important;
-  position: sticky;
-  left: 0;
-  background: var(--surface);
-  padding-right: 10px !important;
-  z-index: 1;
-}
-.hmv-grid__today {
-  background: var(--accent-soft);
-}
-.hmv-habit {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 600;
-  font-size: 12px;
-  white-space: nowrap;
-  color: var(--ink);
-}
-.hmv-cell {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--surface-2);
-  border: none;
-}
-.hmv-cell--on {
-  background: var(--success);
-}
-.hmv-habit-ico {
-  width: 30px;
-  display: grid;
-  place-items: center;
-  flex: none;
-  color: var(--accent);
-}
-
-/* ---------- Goals: vision-board cover icon ---------- */
-.goal-cover {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-/* ---------- Weekly schedule (day cards with a daily ring) ---------- */
 /* ---------- Calendar: legend bar (month view nav) ---------- */
 .legendbar {
   display: flex;
@@ -2670,47 +2530,6 @@ textarea.input {
   }
 }
 
-/* Compact stat tiles for thin modules (Savings, Debt, Hydration, …). Tile
-   padding: 16px (P3 — cards 20px, tiles 16px). */
-.tile-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
-  gap: var(--sp-3);
-}
-.tile {
-  background: var(--surface);
-  border-radius: 14px;
-  box-shadow: var(--shadow-sm);
-  padding: var(--sp-4);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  text-align: left;
-  min-width: 0;
-  transition: transform 0.12s var(--ease);
-}
-.tile:active {
-  transform: scale(0.97);
-}
-.tile__label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.tile__value {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.tile__sub {
-  font-size: 11px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
 .sidebar__brand {
   display: flex;
   align-items: center;
@@ -2815,6 +2634,25 @@ textarea.input {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+.sidebar__fx-toggles {
+  display: flex;
+  gap: 6px;
+}
+.sidebar__fx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--muted);
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+.sidebar__fx-btn--on {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .sidebar__version {
   font-size: 11px;
@@ -2935,6 +2773,30 @@ textarea.input {
   border-bottom: 2px solid var(--outline);
   white-space: nowrap;
 }
+.tasks-table__sortbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.tasks-table__sortbtn:hover {
+  color: var(--ink);
+}
+.tasks-table__sortbtn--on {
+  color: var(--accent);
+}
+.tasks-table__sorticon {
+  flex: none;
+  transform: rotate(90deg);
+}
 .tasks-table tbody td {
   padding: 10px 14px;
   border-bottom: 1px solid var(--hairline);
@@ -3018,64 +2880,6 @@ textarea.input {
   font-size: 17px;
 }
 
-/* ---------- Budget dashboard: Overview grid + Cash Flow rows ---------- */
-.ov-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--sp-4);
-  margin-top: 12px;
-}
-.ov-cell__label {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 3px;
-}
-.ov-cell__value {
-  font-size: 15px;
-  font-weight: 700;
-}
-.ov-cell__input {
-  width: 100%;
-  padding: 6px 0;
-  border: none;
-  background: transparent;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ink);
-  border-bottom: 1.5px solid var(--hairline);
-}
-.ov-cell__input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-.cf-row {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: 9px 0;
-  font-size: 14px;
-}
-.cf-row + .cf-row {
-  border-top: 1px solid var(--hairline);
-}
-.cf-row--total {
-  font-weight: 800;
-  padding-top: 12px;
-}
-.cf-row__label {
-  flex: 1;
-  min-width: 0;
-}
-.cf-row__col {
-  width: 84px;
-  text-align: right;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ---------- HelpTip: the "(?)" affordance next to titles/labels ---------- */
 .helptip {
   position: relative;
@@ -3143,27 +2947,10 @@ textarea.input {
   animation: fade 0.15s var(--ease);
   pointer-events: none;
 }
-.cf-head {
-  display: flex;
-  gap: var(--sp-3);
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--hairline);
-}
-.cf-head .cf-row__label {
-  font-size: 11px;
-}
-.cf-head .cf-row__col {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
 /* ============================================================
    Below: classes added while converting inline style={{}} JSX
    attributes to CSS classes in DashboardScreen, SettingsScreen,
-   DebtScreen, CalendarScreen and Charts.tsx. Grouped per screen.
+   CalendarScreen and Charts.tsx. Grouped per screen.
    ============================================================ */
 
 /* ---- Dashboard ---- */
@@ -3265,150 +3052,6 @@ textarea.input {
   font-weight: 700;
   flex: none;
 }
-.dash-mealslink {
-  padding: 6px 0;
-}
-.dash-mealrow {
-  font-size: 13px;
-  padding: 3px 0;
-}
-.dash-mealrow__slot {
-  text-transform: capitalize;
-}
-.dash-viewlink {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent);
-  flex: none;
-  white-space: nowrap;
-}
-.dash-leftspend-label {
-  font-size: 12px;
-  margin-top: 6px;
-}
-.dash-groupbars {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-}
-.dash-group-over {
-  font-weight: 700;
-}
-.dash-billrow {
-  padding: 6px 0;
-  font-size: 14px;
-}
-/* Featured "next bill" tile: the soonest unpaid bill gets real visual weight
-   instead of hiding in a list. Tint escalates with urgency — neutral surface a
-   week out, accent-soft at ≤3 days, alert-soft (the siren, reserved for real
-   trouble) once it's due today or overdue. */
-.dash-nextbill {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  text-align: left;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--surface-2);
-  margin-bottom: 4px;
-  transition: transform 0.15s var(--ease);
-}
-.dash-nextbill:active {
-  transform: scale(0.98);
-}
-.dash-nextbill--soon {
-  background: var(--accent-soft);
-}
-.dash-nextbill--soon .dash-nextbill__due,
-.dash-nextbill--soon .dash-nextbill__amt {
-  color: var(--accent);
-}
-.dash-nextbill--urgent {
-  background: var(--alert-soft);
-}
-.dash-nextbill--urgent .dash-nextbill__due,
-.dash-nextbill--urgent .dash-nextbill__amt {
-  color: var(--alert);
-}
-.dash-nextbill__body {
-  min-width: 0;
-}
-.dash-nextbill__name {
-  display: block;
-  font-weight: 700;
-  font-size: 15px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dash-nextbill__due {
-  display: block;
-  margin-top: 1px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-}
-.dash-nextbill__amt {
-  flex: none;
-  font-weight: 800;
-  font-size: 20px;
-}
-/* Tappable upcoming-bill row: jumps to that bill in Budget. The due chip
-   escalates with urgency (muted → accent-soft ≤3d → alert-soft overdue/today)
-   so a bill about to hit actually catches the eye instead of reading as one
-   more gray line. */
-.dash-billrow--tap {
-  width: 100%;
-  text-align: left;
-  border-radius: 10px;
-  padding: 7px 4px;
-  color: inherit;
-  transition: background 0.15s var(--ease);
-}
-.dash-billrow--tap:active {
-  background: var(--surface-2);
-}
-.dash-billrow__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dash-billrow__meta {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.dash-billrow__due {
-  padding: 3px 9px;
-  border-radius: var(--r-pill);
-  font-size: 11.5px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.dash-goals-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.dash-habit-icon {
-  width: 30px;
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-}
-.tile__value--success {
-  color: var(--success);
-}
-.dash-tile-suffix {
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--muted);
-}
-
 /* ---- Settings ---- */
 .settings-connected-row {
   padding: 2px 0 10px;
@@ -3638,23 +3281,9 @@ textarea.input {
   font-size: 13px;
   margin-bottom: var(--sp-4);
 }
-.settings-navrow-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
 .hub-card__ico--sm {
   width: 30px;
   height: 30px;
-}
-.settings-checkbox {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--accent);
-}
-.settings-checkbox--sub {
-  flex: none;
-  margin-top: 3px;
 }
 .settings-footer {
   text-align: center;
@@ -3687,65 +3316,6 @@ textarea.input {
   height: 14px;
   box-shadow: none;
   border: 1px solid var(--hairline);
-}
-
-/* ---- Debt ---- */
-.debt-total-value {
-  font-weight: 800;
-  font-size: 22px;
-}
-.debt-order-num {
-  width: 20px;
-  font-size: 12px;
-  font-weight: 700;
-}
-.ic-rotate-up {
-  transform: rotate(-90deg);
-}
-.ic-rotate-down {
-  transform: rotate(90deg);
-}
-.debt-row-btn {
-  background: none;
-  text-align: left;
-  flex: 1;
-}
-.debt-notes {
-  font-size: 12px;
-  margin-top: 2px;
-  font-style: italic;
-}
-.debt-actions {
-  display: flex;
-  gap: 6px;
-}
-.debt-schedule__head {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 0 0 6px;
-}
-.debt-col-month {
-  flex: 1;
-}
-.debt-col-amt {
-  width: 84px;
-  text-align: right;
-}
-.debt-col-bal {
-  width: 90px;
-  text-align: right;
-}
-.debt-schedule__row {
-  font-size: 13px;
-  padding: 7px 0;
-  border-top: 1px solid var(--hairline);
-}
-.debt-extra-row {
-  margin-top: 14px;
-}
-.debt-extra-input {
-  width: 110px;
-  text-align: right;
 }
 
 /* ---- Calendar ---- */
@@ -3864,38 +3434,6 @@ textarea.input {
   gap: 6px;
   font-size: 12px;
 }
-.dot-9--accent {
-  background: var(--accent);
-}
-.dot-9--accent2 {
-  background: var(--accent-2);
-}
-.chart-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.chart-groupedbars {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.chart-groupedbars__legend {
-  display: flex;
-  gap: 14px;
-  font-size: 12px;
-}
-.chart-groupedbars__label {
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-.pbar__fill--budget {
-  background: var(--accent);
-}
-.pbar__fill--actual {
-  background: var(--accent-2);
-}
 .chart-columns {
   display: flex;
   align-items: flex-end;
@@ -3944,4 +3482,58 @@ textarea.input {
 }
 .chart-stackedcolumns__seg {
   flex: none;
+}
+
+/* ---------- Task-complete celebration (Celebration.tsx) ---------- */
+/* One soft pulse, not a strobe — z-index 95 sits above .grain (90, the
+   highest surface below it) so confetti reads as the true front layer. */
+.celebrate-glow {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  width: min(90vw, 560px);
+  height: min(90vw, 560px);
+  transform: translate(-50%, -55%);
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft) 0%, transparent 72%);
+  pointer-events: none;
+  z-index: 95;
+  opacity: 0;
+  animation: celebrate-glow-pulse 650ms ease-out forwards;
+}
+@keyframes celebrate-glow-pulse {
+  0% { opacity: 0; transform: translate(-50%, -55%) scale(0.7); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -55%) scale(1.2); }
+}
+.celebrate-confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 96;
+  overflow: hidden;
+}
+.celebrate-confetti__piece {
+  position: absolute;
+  top: -14px;
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: celebrate-fall 1000ms cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
+}
+@keyframes celebrate-fall {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--drift), 78vh) rotate(var(--rot)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .celebrate-glow {
+    animation-name: celebrate-glow-fade;
+  }
+  @keyframes celebrate-glow-fade {
+    0% { opacity: 0; transform: translate(-50%, -55%); }
+    35% { opacity: 0.8; }
+    100% { opacity: 0; transform: translate(-50%, -55%); }
+  }
 }

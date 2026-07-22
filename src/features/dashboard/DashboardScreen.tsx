@@ -14,6 +14,7 @@ import { categoryColor, PRIORITY_COLOR } from "../../lib/ui";
 import { navigate } from "../../router";
 import { IconRepeat } from "../../components/icons";
 import { DashboardHero } from "./DashboardHero";
+import { TipBanner } from "../../components/TipBanner";
 
 export function DashboardScreen() {
   const { tasks, recurrences, toggleComplete, toggleOccurrence } = useTasks();
@@ -81,16 +82,19 @@ export function DashboardScreen() {
   return (
     <>
       <DashboardHero context={heroContext} />
-      <TaskInsights items={agenda} today={today} categories={categories} />
 
-      {/* Used to be wrapped in .bento, a multi-column layout for balancing
-          MANY dashboard cards by height (Today/Schedule/Wellness/etc. in
-          TrackerA). TrackerE only ever has this one card left here — with a
-          single child, multi-column just squeezed it into one narrow ~50%
-          (or ~33%) column instead of the full width every other dashboard
-          card gets, reported directly as "looks weird and small"
-          (2026-07-21). Unwrapped; see .card--today's own margin-top for the
-          gap against TaskInsights' last card above it. */}
+      {/* Today sits right after the hero, above the KPI/chart cluster —
+          the checklist of what actually needs doing is what a user opens
+          the dashboard for; the analytics below are supporting context, not
+          the first thing that should compete for attention (reported
+          directly, 2026-07-21). Used to be wrapped in .bento, a multi-column
+          layout for balancing MANY dashboard cards by height (Today/
+          Schedule/Wellness/etc. in TrackerA). TrackerE only ever has this
+          one card left here — with a single child, multi-column just
+          squeezed it into one narrow ~50% (or ~33%) column instead of the
+          full width every other dashboard card gets, reported directly as
+          "looks weird and small" (2026-07-21). Unwrapped; see .card--today's
+          own margin-top for the gap against the hero above it. */}
       <div className="card card--today" data-tour="today">
         <div className="spread spread--top dash-today__head">
           <div>
@@ -216,6 +220,12 @@ export function DashboardScreen() {
           </div>
         )}
       </div>
+
+      <div className="mt-3">
+        <TaskInsights items={agenda} today={today} categories={categories} />
+      </div>
+
+      <TipBanner />
 
       <TaskSheet open={addOpen} onClose={() => setAddOpen(false)} />
     </>

@@ -1,7 +1,7 @@
 import { useToast } from "../stores/useToast";
 
 // Global toast stack, rendered once at the app shell. Used for low-friction
-// confirmations — e.g. "Workout added · Jul 9" with a "View" action that jumps
+// confirmations — e.g. "Task added · Jul 9" with a "View" action that jumps
 // to the screen and date the entry actually landed on.
 export function Toaster() {
   const { toasts, dismiss } = useToast();

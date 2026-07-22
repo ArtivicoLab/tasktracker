@@ -1,8 +1,8 @@
-// Desktop sidebar (shown ≥900px). Groups every destination like the reference's
-// Overview / Organization / Finances / Wellness nav.
+// Desktop sidebar (shown ≥900px). Groups every destination under one
+// Overview nav section.
 import { navigate, type Route } from "../router";
 import { NAV, SETTINGS_ITEM, ROUTE_LABELS } from "../nav";
-import { IconCompass, IconHeart } from "./icons";
+import { IconCompass, IconHeart, IconVolume, IconVolumeOff, IconConfetti } from "./icons";
 import { useSync } from "../stores/useSync";
 import { useSettings } from "../stores/useSettings";
 import { HIDE_DEMO_CHROME, useDemo } from "../lib/demo";
@@ -17,15 +17,15 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function Sidebar({ active, onCoachTour }: { active: Route; onCoachTour: () => void }) {
-  const { status, connected, needsReauth, busy, tapToRetry } = useSync();
-  const { hiddenRoutes } = useSettings();
+  const { status, connected, needsReauth, busy, tapToRetry, pushCelebratePrefs } = useSync();
+  const { hiddenRoutes, celebrateSound, celebrateConfetti, update } = useSettings();
   const demo = useDemo((s) => s.demo);
   const dueCounts = useDueToday();
   // Each nav icon shows its OWN share of what's due today, not just the
-  // Dashboard's total — 2 tasks + 1 goal due today lights Tasks "2", Goals
-  // "1", and Dashboard "3" (the sum), instead of only the Dashboard icon
-  // showing anything at all. Reported directly, 2026-07-14: "i still dont
-  // see badged on the next to the icon of other tabs like dashboard."
+  // Dashboard's total — e.g. 2 tasks due today lights Tasks "2" and
+  // Dashboard "2" (the sum), instead of only the Dashboard icon showing
+  // anything at all. Reported directly, 2026-07-14: "i still dont see
+  // badged on the next to the icon of other tabs like dashboard."
   const badgeFor: Partial<Record<Route, number>> = {
     dashboard: dueCounts.total,
     tasks: dueCounts.tasks,
@@ -105,6 +105,26 @@ export function Sidebar({ active, onCoachTour }: { active: Route; onCoachTour: (
       </div>
       <div className="sidebar__foot">
         <Mascot dueToday={dueCounts.total} />
+        <div className="sidebar__fx-toggles">
+          <button
+            className={`sidebar__fx-btn${celebrateConfetti ? " sidebar__fx-btn--on" : ""}`}
+            onClick={() => { update({ celebrateConfetti: !celebrateConfetti }); pushCelebratePrefs(); }}
+            aria-pressed={celebrateConfetti}
+            aria-label={celebrateConfetti ? "Turn off completion confetti" : "Turn on completion confetti"}
+            title={celebrateConfetti ? "Confetti: on" : "Confetti: off"}
+          >
+            <IconConfetti size={15} />
+          </button>
+          <button
+            className={`sidebar__fx-btn${celebrateSound ? " sidebar__fx-btn--on" : ""}`}
+            onClick={() => { update({ celebrateSound: !celebrateSound }); pushCelebratePrefs(); }}
+            aria-pressed={celebrateSound}
+            aria-label={celebrateSound ? "Mute completion sound" : "Unmute completion sound"}
+            title={celebrateSound ? "Sound: on" : "Sound: off"}
+          >
+            {celebrateSound ? <IconVolume size={15} /> : <IconVolumeOff size={15} />}
+          </button>
+        </div>
         {/* Hidden in demo mode — see Header.tsx's matching change for why:
             the "DEMO" brand tag and the DemoBanner already say it. */}
         {!demo && (clickable ? (

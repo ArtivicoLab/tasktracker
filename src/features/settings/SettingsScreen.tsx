@@ -13,7 +13,7 @@ import { currentLockoutMs, tryUnlock } from "../../lib/access";
 import { isDemo } from "../../lib/demo";
 import { spreadsheetUrl } from "../../lib/google/sheets";
 import { navigate } from "../../router";
-import { ALL_NAV_ITEMS, HIDEABLE_NAV_ITEMS } from "../../nav";
+import { ALL_NAV_ITEMS } from "../../nav";
 import { APP_NAME, APP_VERSION, BUILD_SHA } from "../../lib/config";
 import { categoryColor, PICKABLE_CATEGORY_COLORS } from "../../lib/ui";
 
@@ -28,10 +28,11 @@ function formatWait(ms: number): string {
 
 export function SettingsScreen() {
   const {
-    name, theme, weekStart, digestTime, hiddenRoutes, householdMembers, categories,
-    categoryColors, tabBarRoutes, activated, accessCode, update,
+    name, theme, weekStart, digestTime, householdMembers, categories,
+    categoryColors, tabBarRoutes, activated, accessCode,
+    celebrateConfetti, celebrateSound, update,
   } = useSettings();
-  const { connected, spreadsheetId, previousSpreadsheetId, hasClientId, busy, error, wrongAccount, connect, relink, syncNow, useThisAccountInstead, startNewSheet } =
+  const { connected, spreadsheetId, previousSpreadsheetId, hasClientId, busy, error, wrongAccount, connect, relink, syncNow, useThisAccountInstead, startNewSheet, pushCelebratePrefs } =
     useSync();
   const [newMember, setNewMember] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -187,14 +188,6 @@ export function SettingsScreen() {
       danger: true,
     });
     if (ok) void clearTaskHistory();
-  }
-
-  function toggleRoute(route: string) {
-    update({
-      hiddenRoutes: hiddenRoutes.includes(route)
-        ? hiddenRoutes.filter((r) => r !== route)
-        : [...hiddenRoutes, route],
-    });
   }
 
   function addTab(route: string) {
@@ -429,6 +422,30 @@ export function SettingsScreen() {
               : "Off. Set a time to enable."}
           </p>
         </div>
+        <div className="spread" style={{ marginTop: 14 }}>
+          <span className="field__label" style={{ marginBottom: 0 }}>
+            Confetti on completion
+          </span>
+          <button
+            className={`toggle-switch${celebrateConfetti ? " toggle-switch--on" : ""}`}
+            role="switch"
+            aria-checked={celebrateConfetti}
+            aria-label={celebrateConfetti ? "Turn off completion confetti" : "Turn on completion confetti"}
+            onClick={() => { update({ celebrateConfetti: !celebrateConfetti }); pushCelebratePrefs(); }}
+          />
+        </div>
+        <div className="spread" style={{ marginTop: 10 }}>
+          <span className="field__label" style={{ marginBottom: 0 }}>
+            Sound on completion
+          </span>
+          <button
+            className={`toggle-switch${celebrateSound ? " toggle-switch--on" : ""}`}
+            role="switch"
+            aria-checked={celebrateSound}
+            aria-label={celebrateSound ? "Mute completion sound" : "Unmute completion sound"}
+            onClick={() => { update({ celebrateSound: !celebrateSound }); pushCelebratePrefs(); }}
+          />
+        </div>
       </div>
 
       <div className="section-title">
@@ -465,12 +482,11 @@ export function SettingsScreen() {
 
       <div className="section-title">
         Color tags
-        <HelpTip text="Add, rename, or remove the color tags tasks and routines can be filed under (this is just for coloring/filtering your to-do list; it has nothing to do with the Finances section). Tap a tag's name to rename it, or tap its dot to change its color." />
+        <HelpTip text="Add, rename, or remove the color tags tasks and routines can be filed under. Tap a tag's name to rename it, or tap its dot to change its color." />
       </div>
       <div className="card" data-tour="settings-categories">
         <p className="muted settings-hint">
-          Just a color and label to organize your to-do list, like a sticky-note
-          color, not a section of the app. Unrelated to "Finances" below.
+          Just a color and label to organize your to-do list, like a sticky-note color.
         </p>
         {categories.length > 0 && (
           <div className="chip-wrap">
@@ -499,33 +515,6 @@ export function SettingsScreen() {
             Add
           </button>
         </div>
-      </div>
-
-      <div className="section-title">
-        Customize sections
-        <HelpTip text="Hide modules you don't use to declutter the sidebar and More menu. Hidden sections keep their data and stay reachable; this only affects navigation." />
-      </div>
-      <div className="card card--tight" data-tour="settings-sections">
-        {HIDEABLE_NAV_ITEMS.map(({ route, label, Icon, color }) => {
-          const hidden = hiddenRoutes.includes(route);
-          return (
-            <label key={route} className="row spread row--clickable">
-              <span className="settings-navrow-label" style={{ opacity: hidden ? 0.5 : 1 }}>
-                <span className="hub-card__ico hub-card__ico--sm" style={{ background: color }}>
-                  <Icon size={15} />
-                </span>
-                {label}
-              </span>
-              <input
-                type="checkbox"
-                checked={!hidden}
-                onChange={() => toggleRoute(route)}
-                aria-label={`Show ${label}`}
-                className="settings-checkbox"
-              />
-            </label>
-          );
-        })}
       </div>
 
       <div className="section-title">
@@ -602,7 +591,7 @@ export function SettingsScreen() {
         </p>
         <a
           className="btn btn--primary"
-          href="mailto:artivicolab@gmail.com?subject=Task%20Center"
+          href="mailto:artivicolab@gmail.com?subject=Task%20Tracker"
         >
           Contact us
         </a>

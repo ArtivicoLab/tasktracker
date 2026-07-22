@@ -32,7 +32,7 @@ import { useSettings } from "../stores/useSettings";
 import { useTasks } from "../stores/useTasks";
 import type { Recurrence, Task } from "./types";
 
-const LS_ID = "lp.spreadsheetId";
+const LS_ID = "tt.spreadsheetId";
 // Separate from LS_ID on purpose: LS_ID is kept forever once a sheet exists (so
 // a later connect() always relinks to the SAME sheet — see connect()'s doc
 // comment). LS_DISCONNECTED is the only thing disconnect() sets. Without this
@@ -47,7 +47,7 @@ const LS_ID = "lp.spreadsheetId";
 // started returning false for them with zero error, because nothing had ever
 // set the new flag for an existing session. Opt-out is migration-safe: an
 // already-connected user with no flag at all is correctly still connected.
-const LS_DISCONNECTED = "lp.disconnected";
+const LS_DISCONNECTED = "tt.disconnected";
 // Remembers whatever LS_ID was about to be abandoned (start-a-new-sheet,
 // wrong-account recovery) so it's not just gone from the user's perspective
 // — the sheet itself was never deleted, only unlinked, but if they don't
@@ -55,7 +55,7 @@ const LS_DISCONNECTED = "lp.disconnected";
 // no starting point without this. Deliberately just a link/reminder, NOT a
 // one-tap "switch back" — see abandonRememberedSheet()'s doc comment for why
 // that would need real care, not just wiring the id into relink().
-const LS_PREVIOUS_ID = "lp.previousSpreadsheetId";
+const LS_PREVIOUS_ID = "tt.previousSpreadsheetId";
 
 /** Accepts a raw spreadsheet id or a full Google Sheets URL and returns the id. */
 export function extractSpreadsheetId(idOrUrl: string): string {
@@ -111,7 +111,7 @@ export const COLLECTION_TAB: Record<db.Collection, string> = {
 // expected. localStorage (not sessionStorage) here since a dirty tab
 // genuinely needs to survive the tab being closed and reopened too, not
 // just a same-session reload.
-const LS_DIRTY_TABS = "lp.dirtyTabs";
+const LS_DIRTY_TABS = "tt.dirtyTabs";
 
 function loadDirtyTabs(): Set<string> {
   try {
@@ -243,12 +243,12 @@ async function pushAllInner(allowInteractive: boolean): Promise<void> {
 }
 
 /**
- * Push only the tabs a mutation actually touched (see markDirty). Cuts a
- * single-field edit from 16 tabs/32 requests down to 1 tab/2 requests, which
- * is what was tripping Google's per-minute write quota during busy sessions
- * and silently dropping whichever tab hadn't been reached yet (e.g. Workouts,
- * which sits late in SYNC_TABS). A tab is only cleared from the dirty set
- * once it's actually written, so a rate-limited/failed push retries it next time.
+ * Push only the tabs a mutation actually touched (see markDirty), instead of
+ * rewriting every tab on every edit — this is what kept a single-field edit
+ * from tripping Google's per-minute write quota during busy sessions and
+ * silently dropping whichever tab hadn't been reached yet. A tab is only
+ * cleared from the dirty set once it's actually written, so a
+ * rate-limited/failed push retries it next time.
  */
 export function pushDirty(): Promise<void> {
   return serialized(pushDirtyInner);
@@ -349,6 +349,7 @@ export async function pull(allowInteractive: boolean): Promise<void> {
   ]);
 
   useTasks.getState().setAll(tasks, recurrences);
+  await pullCelebratePrefs(id, allowInteractive).catch(() => {});
 }
 
 async function replaceStore<T extends { id: string }>(
@@ -373,6 +374,32 @@ async function writeMetaKey(id: string, key: string, value: string, allowInterac
 }
 
 const ACCESS_CODE_META_KEY = "accessCode";
+const CELEBRATE_CONFETTI_META_KEY = "celebrateConfetti";
+const CELEBRATE_SOUND_META_KEY = "celebrateSound";
+
+/** Adopt celebrateConfetti/celebrateSound from the Sheet, if either key is
+ * present — called from pull() so any device syncing picks up a change made
+ * on another device. Swallows its own errors so a Meta-tab hiccup never
+ * blocks the actual Tasks/Recurrences pull. */
+async function pullCelebratePrefs(id: string, allowInteractive: boolean): Promise<void> {
+  const map = await readMetaTab(id, allowInteractive);
+  const patch: { celebrateConfetti?: boolean; celebrateSound?: boolean } = {};
+  if (map.has(CELEBRATE_CONFETTI_META_KEY)) patch.celebrateConfetti = map.get(CELEBRATE_CONFETTI_META_KEY) === "TRUE";
+  if (map.has(CELEBRATE_SOUND_META_KEY)) patch.celebrateSound = map.get(CELEBRATE_SOUND_META_KEY) === "TRUE";
+  if (Object.keys(patch).length > 0) useSettings.getState().update(patch);
+}
+
+/** Push the current celebrateConfetti/celebrateSound values up to the Sheet
+ * — call this right after toggling either one. No-op if not connected. */
+export async function pushCelebratePrefs(allowInteractive: boolean): Promise<void> {
+  const id = getSpreadsheetId();
+  if (!id) return;
+  const settings = useSettings.getState();
+  const map = await readMetaTab(id, allowInteractive).catch(() => new Map<string, string>());
+  map.set(CELEBRATE_CONFETTI_META_KEY, settings.celebrateConfetti ? "TRUE" : "FALSE");
+  map.set(CELEBRATE_SOUND_META_KEY, settings.celebrateSound ? "TRUE" : "FALSE");
+  await writeTab(id, TAB.Meta, [["key", "value"], ...map.entries()], allowInteractive);
+}
 
 /**
  * Keep the buyer's Etsy access code and the Sheet in sync, both directions:

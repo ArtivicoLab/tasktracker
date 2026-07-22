@@ -1,7 +1,7 @@
 // Minimal PWA service worker: precache the app shell, network-first for
 // navigations, stale-while-revalidate for other assets, never cache Google
 // APIs (spec §9). Bump CACHE to purge every client's old cache on activate.
-const CACHE = "lifeplanner-v2";
+const CACHE = "tasktracker-v1";
 const SHELL = ["/", "/index.html", "/manifest.json"];
 
 self.addEventListener("install", (e) => {

@@ -5,6 +5,7 @@ import { addDaysISO, todayISO } from "../lib/dates";
 import { occurrencesForWindow } from "../lib/recurrence";
 import { cancelReminder, syncTaskReminder } from "../lib/reminders";
 import { useSync } from "./useSync";
+import { useCelebrate } from "./useCelebrate";
 import type { Occurrence, Recurrence, Status, Task } from "../lib/types";
 
 interface TasksState {
@@ -141,6 +142,7 @@ export const useTasks = create<TasksState>((set, get) => ({
       status: done ? "NotStarted" : "Completed",
       completedAt: done ? "" : nowIso(),
     });
+    if (!done) useCelebrate.getState().fire();
   },
 
   addRecurrence: (patch) => {
@@ -231,6 +233,7 @@ export const useTasks = create<TasksState>((set, get) => ({
         status: "Completed",
         completedAt: nowIso(),
       });
+      useCelebrate.getState().fire();
     } else if (occ.taskId) {
       get().toggleComplete(occ.taskId);
     }

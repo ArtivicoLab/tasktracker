@@ -1,6 +1,6 @@
 // Mirrors the nav badge (Sidebar/TabBar) into the browser tab itself: the
 // tab title gets a "(N)" prefix and the favicon gets a small red count badge
-// drawn over it, both live-updating as tasks/goals/bills change. Reported
+// drawn over it, both live-updating as tasks change. Reported
 // directly, 2026-07-14: "can we get the notification on the dashboard to
 // show in the browser tab too? and update when as the user update their
 // daily task." Matters most for a pinned tab, which shows the favicon only
@@ -12,7 +12,7 @@ import { APP_NAME } from "../lib/config";
 const BASE_TITLE = APP_NAME;
 const FAVICON_SRC = "/favicon-96x96.png";
 const ICON_SIZE = 96;
-const BADGE_LINK_ID = "lp-dynamic-favicon";
+const BADGE_LINK_ID = "tasktracker-dynamic-favicon";
 const BADGE_COLOR = "#ff5ca8"; // matches --alert/--cat-pink (tokens.css), the same candy pink as the nav badge
 
 function getOrCreateBadgeLink(): HTMLLinkElement {

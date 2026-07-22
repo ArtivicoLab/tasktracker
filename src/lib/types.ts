@@ -68,6 +68,8 @@ export interface Settings {
   activated: boolean; // true once a valid accessCode was entered — unlocks Google Sheets connect
   hideAtsHint?: boolean;
   tourDone?: boolean;
+  celebrateConfetti: boolean; // confetti + glow when a task is checked off
+  celebrateSound: boolean; // completion chime when a task is checked off
 }
 
 /** A calendar-facing occurrence: either computed (virtual) or backed by a real Task row. */

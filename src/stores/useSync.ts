@@ -42,6 +42,11 @@ interface SyncState {
    * to a full push if omitted).
    */
   touch: (collection?: Collection) => void;
+  /** Best-effort push of celebrateConfetti/celebrateSound to the Sheet's
+   * Settings tab — call right after toggling either one. No-op if not
+   * connected; failures are swallowed since these are a nice-to-have, never
+   * something that should surface an error to the user over a toggle. */
+  pushCelebratePrefs: () => void;
 
   connect: () => Promise<void>;
   /** Link to an existing Sheet by id/URL — the cross-device recovery path. */
@@ -130,6 +135,10 @@ export const useSync = create<SyncState>((set, get) => ({
     set({ status: "syncing" });
     if (flashTimer) clearTimeout(flashTimer);
     flashTimer = setTimeout(() => set({ status: "synced", pending: 0 }), 400);
+  },
+
+  pushCelebratePrefs: () => {
+    if (get().connected) void sync.pushCelebratePrefs(false).catch(() => {});
   },
 
   connect: async () => {

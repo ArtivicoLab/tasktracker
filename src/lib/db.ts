@@ -19,18 +19,18 @@ export interface SyncOp {
   ts: string;
 }
 
-interface LP extends DBSchema {
+interface AppDB extends DBSchema {
   tasks: { key: string; value: Task };
   recurrences: { key: string; value: Recurrence };
   kv: { key: string; value: unknown };
   queue: { key: string; value: SyncOp };
 }
 
-let dbp: Promise<IDBPDatabase<LP>> | null = null;
+let dbp: Promise<IDBPDatabase<AppDB>> | null = null;
 
-function db(): Promise<IDBPDatabase<LP>> {
+function db(): Promise<IDBPDatabase<AppDB>> {
   if (!dbp) {
-    dbp = openDB<LP>(DB_NAME, DB_VERSION, {
+    dbp = openDB<AppDB>(DB_NAME, DB_VERSION, {
       upgrade(d) {
         for (const name of ["tasks", "recurrences"] as const) {
           if (!d.objectStoreNames.contains(name)) {

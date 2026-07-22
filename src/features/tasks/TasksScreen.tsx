@@ -4,8 +4,9 @@ import { Chip, ChipRow } from "../../components/Chip";
 import { Checkbox } from "../../components/Checkbox";
 import { EmptyState } from "../../components/EmptyState";
 import { HelpTip } from "../../components/HelpTip";
-import { IconEdit, IconHeart, IconPlus, IconRepeat, IconTasks, IconTrash } from "../../components/icons";
+import { IconChevron, IconEdit, IconHeart, IconPlus, IconRepeat, IconTasks, IconTrash } from "../../components/icons";
 import { TaskSheet } from "./TaskSheet";
+import { TipBanner } from "../../components/TipBanner";
 import { buildAgenda, sortAgenda, type AgendaItem } from "./agenda";
 import { useTasks } from "../../stores/useTasks";
 import { useSettings } from "../../stores/useSettings";
@@ -39,13 +40,14 @@ const SEGS = [
   { value: "all" as Seg, label: "All" },
 ];
 
-type Sort = "due" | "priority" | "status" | "name" | "assignee" | "daysleft";
+type Sort = "due" | "priority" | "status" | "name" | "assignee" | "daysleft" | "category";
 const SORTS: { value: Sort; label: string }[] = [
   { value: "due", label: "Due date" },
   { value: "daysleft", label: "Days left" },
   { value: "priority", label: "Priority" },
   { value: "status", label: "Status" },
   { value: "assignee", label: "Assigned to" },
+  { value: "category", label: "Category" },
   { value: "name", label: "Name" },
 ];
 
@@ -129,6 +131,7 @@ export function TasksScreen() {
         case "status": return STATUSES.indexOf(a.status) - STATUSES.indexOf(b.status) || dateCmp(a, b);
         case "name": return a.title.localeCompare(b.title);
         case "assignee": return (a.assignee || "~").localeCompare(b.assignee || "~") || dateCmp(a, b);
+        case "category": return a.category.localeCompare(b.category) || dateCmp(a, b);
         case "daysleft": return daysLeft(a) - daysLeft(b);
         default: return dateCmp(a, b);
       }
@@ -262,13 +265,13 @@ export function TasksScreen() {
               <thead>
                 <tr>
                   <th style={{ width: 34 }} aria-label="Done" />
-                  <th>Task</th>
-                  <th>Category</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Assigned</th>
-                  <th>Due</th>
-                  <th>Days left</th>
+                  <SortTh label="Task" value="name" sort={sort} onSort={setSort} />
+                  <SortTh label="Category" value="category" sort={sort} onSort={setSort} />
+                  <SortTh label="Priority" value="priority" sort={sort} onSort={setSort} />
+                  <SortTh label="Status" value="status" sort={sort} onSort={setSort} />
+                  <SortTh label="Assigned" value="assignee" sort={sort} onSort={setSort} />
+                  <SortTh label="Due" value="due" sort={sort} onSort={setSort} />
+                  <SortTh label="Days left" value="daysleft" sort={sort} onSort={setSort} />
                   <th style={{ width: 70 }} aria-label="Actions" />
                 </tr>
               </thead>
@@ -295,6 +298,8 @@ export function TasksScreen() {
         </button>
       )}
 
+      <TipBanner />
+
       <button className="fab" aria-label="Add task" data-tour="tasks-fab" onClick={() => { setEditItem(null); setSheetOpen(true); }}>
         <IconPlus />
       </button>
@@ -302,6 +307,29 @@ export function TasksScreen() {
       <TaskSheet open={sheetOpen} editTask={editItem}
         onClose={() => { setSheetOpen(false); setEditItem(null); }} />
     </>
+  );
+}
+
+function SortTh({
+  label, value, sort, onSort,
+}: {
+  label: string;
+  value: Sort;
+  sort: Sort;
+  onSort: (v: Sort) => void;
+}) {
+  const on = sort === value;
+  return (
+    <th>
+      <button
+        className={`tasks-table__sortbtn${on ? " tasks-table__sortbtn--on" : ""}`}
+        onClick={() => onSort(value)}
+        aria-label={`Sort by ${label}`}
+      >
+        {label}
+        {on && <IconChevron size={11} className="tasks-table__sorticon" />}
+      </button>
+    </th>
   );
 }
 

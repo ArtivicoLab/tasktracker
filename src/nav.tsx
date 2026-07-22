@@ -53,12 +53,3 @@ export const ROUTE_LABELS: Record<Route, string> = {
   privacy: "Privacy",
   whatsnew: "What's New",
 } as Record<Route, string>;
-
-// The bottom tab bar (mobile) hardcodes these 4 + More as fixed chrome, so
-// hiding a section never breaks that layout. There are no other modules left
-// to hide in this app, so HIDEABLE_NAV_ITEMS is always empty — kept as an
-// export since Settings still renders whatever it contains.
-const CORE_ROUTES: Route[] = ["dashboard", "tasks", "calendar", "recurring"];
-export const HIDEABLE_NAV_ITEMS: NavItem[] = ALL_NAV_ITEMS.filter(
-  (i) => !CORE_ROUTES.includes(i.route)
-);

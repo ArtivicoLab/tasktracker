@@ -8,10 +8,10 @@ import { invalidateToken, requestToken, SCOPE_CALENDAR } from "./auth";
 const BASE = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
 // reminders.ts's own doc comment calls this "fire-and-forget... a reminder is
-// a nice-to-have, never a reason to fail the task/bill save" — so it must
+// a nice-to-have, never a reason to fail the task save" — so it must
 // NEVER interactively prompt. It used to fall back to an unattended popup
 // exactly like the old sheets.ts bug (same root cause, this file was just
-// never updated when that one was fixed) — every task/bill save with a
+// never updated when that one was fixed) — every task save with a
 // reminder on would silently need a fresh calendar.events token, which
 // popped a real Google sign-in window on every single save. guard() in
 // reminders.ts already swallows any error here, so failing fast and quiet

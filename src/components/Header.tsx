@@ -1,4 +1,4 @@
-import { IconCompass } from "./icons";
+import { IconCompass, IconSettings } from "./icons";
 import { navigate, useRoute } from "../router";
 import { useSync } from "../stores/useSync";
 import { HIDE_DEMO_CHROME, useDemo } from "../lib/demo";
@@ -80,11 +80,11 @@ export function Header({ onCoachTour }: { onCoachTour: () => void }) {
       </button>
       <button
         className="avatar"
-        aria-label="LP: Settings"
+        aria-label="Settings"
         data-tour="settings"
         onClick={() => navigate("settings")}
       >
-        LP
+        <IconSettings size={16} />
       </button>
     </header>
   );

@@ -19,6 +19,8 @@ const DEFAULTS: Settings = {
   activated: false,
   hideAtsHint: false,
   tourDone: false,
+  celebrateConfetti: true,
+  celebrateSound: true,
 };
 
 interface SettingsState extends Settings {
@@ -76,5 +78,7 @@ function pickSettings(s: Settings): Settings {
     activated: s.activated,
     hideAtsHint: s.hideAtsHint,
     tourDone: s.tourDone,
+    celebrateConfetti: s.celebrateConfetti,
+    celebrateSound: s.celebrateSound,
   };
 }

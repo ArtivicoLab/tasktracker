@@ -8,6 +8,7 @@ import { ReconnectBanner } from "./components/ReconnectBanner";
 import { UpdatePrompt } from "./components/UpdatePrompt";
 import { Toaster } from "./components/Toast";
 import { ConfirmHost } from "./components/ConfirmDialog";
+import { Celebration } from "./components/Celebration";
 import { TabNotifier } from "./components/TabNotifier";
 import { DashboardScreen } from "./features/dashboard/DashboardScreen";
 import { TasksScreen } from "./features/tasks/TasksScreen";
@@ -70,6 +71,7 @@ export default function App() {
       <TabNotifier />
       <Toaster />
       <ConfirmHost />
+      <Celebration />
       {showTour && <CoachTour onDone={() => setShowTour(false)} />}
     </div>
   );
