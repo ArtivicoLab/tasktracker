@@ -4,6 +4,7 @@ import { BottomSheet } from "../../components/BottomSheet";
 import { HelpTip } from "../../components/HelpTip";
 import { IconClose } from "../../components/icons";
 import { LockGatedButton } from "../../components/LockGatedButton";
+import { ConnectingSpark } from "../../components/ConnectingSpark";
 import { useSettings } from "../../stores/useSettings";
 import { useTasks } from "../../stores/useTasks";
 import { useSync } from "../../stores/useSync";
@@ -319,12 +320,7 @@ export function SettingsScreen() {
               </div>
             )}
             {busy && hasClientId && (
-              <p className="muted settings-hint--sm">
-                Waiting on Google's sign-in popup — if you don't see it, check your address bar
-                for a blocked-popup icon and allow it for this site. This app isn't verified with
-                Google yet, so it may show an "unverified app" warning first; that's expected,
-                just click through it. This can take up to a minute or so.
-              </p>
+              <ConnectingSpark text={`Waiting on Google's sign-in popup — if you don't see it, check your address bar for a blocked-popup icon and allow it for this site. This app isn't verified with Google yet, so it may show an "unverified app" warning first; that's expected, just click through it. This can take up to a minute or so.`} />
             )}
             {!activated && (
               <p className="muted settings-hint--sm">
