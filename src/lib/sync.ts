@@ -457,12 +457,23 @@ export async function reauth(): Promise<void> {
   await pushAll(true);
 }
 
+export type ConnectPhase = "token" | "linking" | "creating" | "saving";
+
 /**
  * Connect a Google account. If a sheet id is remembered we relink + pull;
  * otherwise we create a fresh app-managed spreadsheet and push local data up.
  * Returns the spreadsheet id.
+ *
+ * `onPhase`, if given, is called as each major step starts — surfaced so the
+ * UI can show something more specific than one opaque "Connecting…" for
+ * however long the whole thing takes. Reported directly, 2026-07-22: after
+ * picking a Google account the button just said "Connecting" with no way to
+ * tell "still waiting on the token" from "creating your sheet" from "writing
+ * your tasks" apart, which reads as stuck even when it's actually still
+ * working through a real multi-step chain (a first-time connect creates a
+ * brand-new spreadsheet, then pushes every local task/recurrence into it).
  */
-export async function connect(): Promise<string> {
+export async function connect(onPhase?: (phase: ConnectPhase) => void): Promise<string> {
   // Ask for an interactive token FIRST, straight off the click — every other
   // Sheets call below tries a silent refresh before falling back to a popup,
   // which works for background sync but would delay the very first popup here
@@ -481,6 +492,7 @@ export async function connect(): Promise<string> {
   // the same day (see CLAUDE.md's "THE DATABASE IS THE USER'S GOOGLE SHEET"
   // section) — don't reintroduce that by adding SCOPE_CALENDAR back here
   // without first actually completing Google's verification for it.
+  onPhase?.("token");
   await requestToken(SCOPE_SHEETS, true);
 
   // Leaving demo BEFORE any push/pull: setDemoMode reloads the stores from the
@@ -495,6 +507,7 @@ export async function connect(): Promise<string> {
   const existing = getSpreadsheetId();
   if (existing) {
     try {
+      onPhase?.("linking");
       await ensureTabs(existing, ALL_TABS, true, LEGACY_TAB_RENAMES);
       localStorage.removeItem(LS_DISCONNECTED);
       // Push local changes UP before pulling the sheet down. This device may
@@ -508,6 +521,7 @@ export async function connect(): Promise<string> {
       // got a fresh interactive token above, so this push is reliable; pull()
       // afterward then just reads back a sheet that already reflects this
       // device's latest state, instead of clobbering it.
+      onPhase?.("saving");
       await pushAll(true);
       await pull(true);
       await syncAccessCode(existing, true);
@@ -529,11 +543,13 @@ export async function connect(): Promise<string> {
       }
     }
   }
+  onPhase?.("creating");
   const id = await createSpreadsheet(SPREADSHEET_TITLE, ALL_TABS, true);
   setSpreadsheetId(id);
   // connect() already forced a fresh interactive token synchronously at the
   // top of this function (straight off the click), so this token is already
   // valid — true here just documents that a popup is safe in this call chain.
+  onPhase?.("saving");
   await pushAll(true); // seed the new sheet with whatever is on-device now
   await syncAccessCode(id, true);
   return id;

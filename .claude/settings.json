@@ -4,7 +4,11 @@
       "Bash(node -e ' *)",
       "Bash(kill 79708)",
       "Bash(nohup npm run dev)",
-      "Bash(grep -c \"\\\\.env$\")"
+      "Bash(grep -c \"\\\\.env$\")",
+      "Bash(curl -sIL https://tasktracker.artivicolab.com/ --max-time 10)",
+      "Bash(curl -s https://tasktracker.artivicolab.com/ --max-time 10)",
+      "Bash(curl -s \"https://tasktracker.artivicolab.com/assets/index-O2iGWISF.js\" --max-time 15 -o /tmp/live-bundle.js)",
+      "Bash(grep -oE \"[0-9]{12}-[a-z0-9]{20,40}\\\\.apps\\\\.googleusercontent\\\\.com\" /tmp/live-bundle.js)"
     ]
   }
 }
