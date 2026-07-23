@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(kill 79708)",
+      "Bash(nohup npm run dev)",
+      "Bash(grep -c \"\\\\.env$\")"
+    ]
+  }
+}

@@ -59,15 +59,21 @@ export function Celebration() {
   const celebrateConfetti = useSettings((s) => s.celebrateConfetti);
   const [pieces, setPieces] = useState<Piece[]>([]);
   const [glowKey, setGlowKey] = useState(0);
-  const firstRun = useRef(true);
+  // Captured ONCE at mount (useRef's initializer is only ever used on the
+  // very first render) — comparing against this, rather than a "have I run
+  // yet" boolean latch, is what makes this StrictMode-safe. StrictMode
+  // double-invokes effects once per mount in dev (setup → cleanup → setup
+  // again) specifically to catch bugs like this: a boolean latch flips to
+  // false on the FIRST of those two invocations and stays false for the
+  // second one, which then wrongly reads as "not the initial run" and fires
+  // for real — reproducing exactly as "confetti on every reload" (confirmed
+  // 2026-07-22, dev-server only, since production React never double-invokes).
+  // Comparing burstId to its own mount-time value is idempotent no matter
+  // how many times the same value gets re-invoked.
+  const mountBurstId = useRef(burstId);
 
   useEffect(() => {
-    if (firstRun.current) {
-      // burstId starts at 0 on every mount — skip the initial effect run so
-      // reloading the app doesn't celebrate nothing.
-      firstRun.current = false;
-      return;
-    }
+    if (burstId === mountBurstId.current) return;
     if (celebrateSound) playChime();
     if (!celebrateConfetti) {
       setPieces([]);
