@@ -485,16 +485,29 @@ async function syncAccessCode(id: string, allowInteractive: boolean): Promise<vo
 }
 
 /**
- * Lightweight reconnect for the common "token just expired, tab sat open a
- * while" case — tapToRetry()'s needsReauth branch. Deliberately narrower
- * than connect() in two ways:
- * - Weight: no ensureTabs/pull/syncAccessCode, just a fresh token then one
- *   pushDirty. Those extra steps are right for a genuine first link or a
- *   long-overdue relink, but overkill for a routine expired token — any ONE
- *   of them failing for an unrelated reason (a blip, a rate limit) used to
- *   leave needsReauth stuck true for a reason that had nothing to do with
- *   reconnecting (see the "match the recovery action's weight to what
- *   actually broke" bug this replaced).
+ * Reconnect for the common "token just expired, tab sat open a while" case —
+ * tapToRetry()'s needsReauth branch. This is actually the MOST likely real
+ * trigger for the cross-device data-loss scenario mergeReconnect() exists
+ * for (see its doc comment above): a tab left open for ~1hr+ has its Google
+ * token silently lapse (keepTokenWarm's interval/visibilitychange checks
+ * flag needsReauth before this blocks anything, surfaced via the persistent
+ * <ReconnectBanner/>), and it's entirely plausible another device connected
+ * and edited the same Sheet during that whole stretch. This function is what
+ * actually runs the instant the user taps that banner — so it used to matter
+ * just as much as connect()'s reconnect branch, but historically had its OWN
+ * separate blind `pushAll(true)` here that mergeReconnect's introduction
+ * never touched, i.e. this exact code path could still silently overwrite
+ * another device's newer edits even after connect() itself was fixed
+ * (caught 2026-07-23, before shipping — not a separate live incident).
+ * Fixed the same way: merge by updatedAt instead of blindly pushing.
+ *
+ * Still deliberately narrower than connect() in two ways:
+ * - Weight: no ensureTabs/syncAccessCode. Those extra steps are right for a
+ *   genuine first link or a long-overdue relink, but overkill for a routine
+ *   expired token — any ONE of them failing for an unrelated reason (a blip,
+ *   a rate limit) used to leave needsReauth stuck true for a reason that had
+ *   nothing to do with reconnecting (see the "match the recovery action's
+ *   weight to what actually broke" bug this replaced).
  * - Scope: requests SCOPE_SHEETS alone, never the combined
  *   SCOPE_SHEETS_AND_CALENDAR. Calendar access was already granted once at
  *   the original Connect; re-requesting it on every routine reconnect isn't
@@ -505,18 +518,32 @@ async function syncAccessCode(id: string, allowInteractive: boolean): Promise<vo
  *   which only ever escalates to SCOPE_SHEETS). connect()'s own doc comment
  *   already establishes the rule this was supposed to follow: "nothing else
  *   in the app is ever allowed to ask for calendar.events interactively."
+ *
  * Still requests the token FIRST, synchronously off the click, before any
  * silent attempt — trying silent first here (like pushAll()'s normal chain
  * does) risks the eventual interactive fallback landing outside the
  * browser's user-gesture window if the silent attempt hangs its full
  * timeout, which is likely precisely because needsReauth being true already
- * means a recent silent attempt just failed. Once this resolves, pushAll's
+ * means a recent silent attempt just failed. Once this resolves, the merge's
  * own authedFetch calls hit the now-warm SCOPE_SHEETS cache entry instantly
  * — no further GIS round-trip, no added delay.
+ *
+ * Wrapped in serialized() (the same mutex pushAll/pushDirty share) on
+ * purpose, not called bare: while needsReauth was true, `connected` was
+ * still true too (they're independent flags — see useSync.ts), so
+ * useSync.touch() kept scheduling normal debounced pushDirty attempts on
+ * every edit the whole time, each one failing the same way. Without this
+ * mutex, one of those could still be mid-flight against the same tab at the
+ * exact moment the user taps reconnect.
  */
 export async function reauth(): Promise<void> {
   await requestToken(SCOPE_SHEETS, true);
-  await pushAll(true);
+  await serialized(async () => {
+    if (isDemo() || syncSuspended) return;
+    const id = getSpreadsheetId();
+    if (!id) return;
+    await mergeReconnect(id, true);
+  });
 }
 
 export type ConnectPhase = "token" | "linking" | "creating" | "saving";
