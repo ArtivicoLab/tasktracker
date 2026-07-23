@@ -147,7 +147,7 @@ export async function disconnectAndClearDevice(): Promise<
       reason:
         e instanceof Error
           ? e.message
-          : "Disconnected, but couldn't confirm your last changes reached Google Sheets — nothing on this device was cleared.",
+          : "Disconnected, but couldn't confirm your last changes reached Google Sheets. Nothing on this device was cleared.",
     };
   }
   sync.disconnect();

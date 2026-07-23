@@ -4,13 +4,13 @@
 import { IconZap } from "./icons";
 
 const TIPS: string[] = [
-  "Review overdue tasks first — tackle what matters most.",
+  "Review overdue tasks first. Tackle what matters most.",
   "Pick the smallest task on your list and start there. Momentum beats motivation.",
   "Feeling stuck? Just do one thing. Any one thing.",
-  "Recurring tasks build momentum — check one off to keep the streak alive.",
+  "Recurring tasks build momentum. Check one off to keep the streak alive.",
   "A task feeling heavy? Break it into two smaller ones.",
   "Done is better than perfect. Check it off and move on.",
-  "Pick ONE priority for today — everything else can wait.",
+  "Pick ONE priority for today. Everything else can wait.",
   "A long list is loud. Filter down to just Today and breathe.",
 ];
 

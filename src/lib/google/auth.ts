@@ -222,7 +222,7 @@ export function requestToken(
             // complete, so nothing ever calls back either way. Cover both —
             // don't tell someone to check their popup blocker when the real
             // issue was Google's server having a bad moment.
-            ? "Google sign-in didn't complete. If a popup was blocked, look for a blocked-popup icon in your address bar and allow it for this site. If the popup opened but showed a Google error page, that's a temporary issue on Google's end — just try again."
+            ? "Google sign-in didn't complete. If a popup was blocked, look for a blocked-popup icon in your address bar and allow it for this site. If the popup opened but showed a Google error page, that's a temporary issue on Google's end. Just try again."
             : "Could not silently refresh your Google connection."));
         }, timeoutMs);
 

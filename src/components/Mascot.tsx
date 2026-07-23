@@ -7,7 +7,7 @@ function faceFor(remaining: number): { line: string; mood: "grin" | "smile" | "c
     return { line: "All clear today. Nice work.", mood: "grin" };
   }
   if (remaining <= 2) {
-    return { line: `Almost there — ${remaining} to go.`, mood: "smile" };
+    return { line: `Almost there, ${remaining} to go.`, mood: "smile" };
   }
   return { line: `${remaining} need you today. You've got this.`, mood: "calm" };
 }

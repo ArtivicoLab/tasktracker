@@ -63,7 +63,7 @@ export function SettingsScreen() {
     const ok = await confirmDialog({
       title: "Disconnect & clear this device?",
       message:
-        "We'll sync any last changes to your Google Sheet first, then remove your planner data from this device only — your Sheet keeps everything.",
+        "We'll sync any last changes to your Google Sheet first, then remove your planner data from this device only. Your Sheet keeps everything.",
       confirmLabel: "Disconnect & clear",
       danger: true,
     });
@@ -320,7 +320,7 @@ export function SettingsScreen() {
               </div>
             )}
             {busy && hasClientId && (
-              <ConnectingSpark text={`Waiting on Google's sign-in popup — if you don't see it, check your address bar for a blocked-popup icon and allow it for this site. This app isn't verified with Google yet, so it may show an "unverified app" warning first; that's expected, just click through it. This can take up to a minute or so.`} />
+              <ConnectingSpark text={`Waiting on Google's sign-in popup. If you don't see it, check your address bar for a blocked-popup icon and allow it for this site. This app isn't verified with Google yet, so it may show an "unverified app" warning first; that's expected, just click through it. This can take up to a minute or so.`} />
             )}
             {!activated && (
               <p className="muted settings-hint--sm">
@@ -337,7 +337,7 @@ export function SettingsScreen() {
         {wrongAccount ? (
           <div className="card settings-setup-note" style={{ marginTop: 10 }}>
             <b>Wrong Google account.</b> The Google account you just signed in with
-            doesn't have access to the sheet this device is already linked to — most
+            doesn't have access to the sheet this device is already linked to. Most
             likely your Task Tracker data lives under a different Google account
             (check your Drive for a "Task Tracker" spreadsheet to see which one).
             <div className="spread spread--gap8" style={{ marginTop: 10 }}>
@@ -363,9 +363,9 @@ export function SettingsScreen() {
         {clearError && <p className="neg settings-error">{clearError}</p>}
         {previousSpreadsheetId && (
           <p className="muted settings-hint--sm" style={{ marginTop: 10 }}>
-            Previously connected sheet still has everything on it —{" "}
+            Previously connected sheet still has everything on it.{" "}
             <a href={spreadsheetUrl(previousSpreadsheetId)} target="_blank" rel="noreferrer">
-              open it to copy anything over ↗
+              Open it to copy anything over ↗
             </a>
           </p>
         )}
@@ -454,7 +454,7 @@ export function SettingsScreen() {
 
       <div className="section-title">
         Team members
-        <HelpTip text="Add everyone on your team once. Their names then show as quick-pick 'Assigned to' chips on every task, so you never get 'Alex' and 'alex' as two different people. No accounts or logins needed — just labels." />
+        <HelpTip text="Add everyone on your team once. Their names then show as quick-pick 'Assigned to' chips on every task, so you never get 'Alex' and 'alex' as two different people. No accounts or logins needed, just labels." />
       </div>
       <div className="card" data-tour="settings-team">
         {householdMembers.length > 0 && (

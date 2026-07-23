@@ -46,7 +46,7 @@ const STEPS: TourStep[] = [
   {
     target: "tasks-insights",
     title: "Your numbers, live",
-    body: "Total, completion rate, overdue, and due-soon counts, plus breakdowns by status, category, priority, activity over time, and who's carrying what — all update live as you work.",
+    body: "Total, completion rate, overdue, and due-soon counts, plus breakdowns by status, category, priority, activity over time, and who's carrying what. All of it updates live as you work.",
   },
   {
     target: "nav-more",
@@ -128,7 +128,7 @@ const STEPS: TourStep[] = [
     target: "settings-team",
     route: "settings",
     title: "Who's on your team",
-    body: "Add names here and they show up as one-tap \"Assigned to\" chips on every task — no accounts or logins needed.",
+    body: "Add names here and they show up as one-tap \"Assigned to\" chips on every task. No accounts or logins needed.",
   },
 ];
 
