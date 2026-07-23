@@ -13,7 +13,10 @@
       "Bash(python3 -c ' *)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" \"https://tasktracker.artivicolab.com\")",
       "Bash(curl -s \"https://tasktracker.artivicolab.com\")",
-      "Bash(curl -s \"https://tasktracker.artivicolab.com/manifest.json\")"
+      "Bash(curl -s \"https://tasktracker.artivicolab.com/manifest.json\")",
+      "WebSearch",
+      "WebFetch(domain:www.etsy.com)",
+      "Bash(lsof -i :5516 -sTCP:LISTEN)"
     ]
   }
 }
