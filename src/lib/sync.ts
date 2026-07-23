@@ -297,6 +297,68 @@ async function writeAllTabs(id: string, tabs: string[], allowInteractive: boolea
   if (firstError) throw firstError;
 }
 
+/**
+ * Merge two versions of the same collection by `updatedAt`, per record —
+ * whichever side edited a given row most recently wins THAT row, not the
+ * whole collection. A row that exists on only one side (created locally
+ * while offline, or created on another device meanwhile) is kept either way.
+ *
+ * KNOWN LIMITATION, not silently swept under the rug: this schema has no
+ * deletion tombstones, so a row deleted on the OTHER device during this
+ * device's lapse looks identical to "never existed there" — this merge
+ * can't tell the two apart and will resurrect it. Fixing that needs a
+ * deleted-ids log synced alongside the real data, which is a real schema
+ * change, not something to slip in unannounced inside a merge helper.
+ */
+function mergeByUpdatedAt<T extends { id: string; updatedAt: string }>(
+  local: T[],
+  remote: T[]
+): T[] {
+  const byId = new Map<string, T>();
+  for (const r of remote) byId.set(r.id, r);
+  for (const l of local) {
+    const r = byId.get(l.id);
+    if (!r || l.updatedAt > r.updatedAt) byId.set(l.id, l);
+  }
+  return [...byId.values()];
+}
+
+/**
+ * Reconcile local state with the Sheet on reconnect, row by row, instead of
+ * the old blind pushAll()-then-pull() — that ordering assumed THIS device is
+ * the only source of change since the Sheet was last touched, which is only
+ * true if no other device also worked on it during this device's lapse
+ * (needed reauth, was offline, tab was closed). If one did, blindly pushing
+ * this device's stale local snapshot silently overwrote the other device's
+ * newer edits with old ones (reported directly, 2026-07-23). Merging by
+ * updatedAt per row instead means the two devices' edits to DIFFERENT tasks
+ * both survive; only a genuine edit to the SAME task on both sides has to
+ * pick a winner, and it picks whichever one actually happened later.
+ */
+async function mergeReconnect(id: string, allowInteractive: boolean): Promise<void> {
+  const data = await batchGet(id, SYNC_TABS, allowInteractive);
+  const remoteTasks = parseRows<Task>(data[TAB.Tasks] ?? [], rowToTask);
+  const remoteRecurrences = parseRows<Recurrence>(data[TAB.Recurrences] ?? [], rowToRecurrence);
+
+  const localTasks = await db.all<Task>("tasks");
+  const localRecurrences = await db.all<Recurrence>("recurrences");
+
+  const mergedTasks = mergeByUpdatedAt(localTasks, remoteTasks);
+  const mergedRecurrences = mergeByUpdatedAt(localRecurrences, remoteRecurrences);
+
+  await Promise.all([
+    replaceStore("tasks", mergedTasks),
+    replaceStore("recurrences", mergedRecurrences),
+  ]);
+  useTasks.getState().setAll(mergedTasks, mergedRecurrences);
+  await pullCelebratePrefs(id, allowInteractive).catch(() => {});
+
+  // tabValues() (inside writeAllTabs) reads straight back from IndexedDB, so
+  // this pushes the just-merged result — both sides end up consistent, not
+  // just the Sheet.
+  await writeAllTabs(id, SYNC_TABS, allowInteractive);
+}
+
 // Silent tokens are normally requested reactively, only at the moment a push
 // actually needs one — so if the token happened to be near/past expiry, the
 // reauth prompt landed exactly when the user was mid-edit trying to save
@@ -510,20 +572,30 @@ export async function connect(onPhase?: (phase: ConnectPhase) => void): Promise<
       onPhase?.("linking");
       await ensureTabs(existing, ALL_TABS, true, LEGACY_TAB_RENAMES);
       localStorage.removeItem(LS_DISCONNECTED);
-      // Push local changes UP before pulling the sheet down. This device may
-      // have kept working (safely, in IndexedDB) through a stretch where the
-      // connection was stuck needing reauth — background pushes were failing
-      // that whole time, so the SHEET is the stale side here, not the
-      // device. A pull()-only reconnect used to blindly overwrite local data
-      // with that stale sheet content, silently erasing everything typed
-      // while disconnected (confirmed 2026-07-13 — real data loss, reported
-      // directly: "once I signed back in everything was cleared"). We just
-      // got a fresh interactive token above, so this push is reliable; pull()
-      // afterward then just reads back a sheet that already reflects this
-      // device's latest state, instead of clobbering it.
+      // Merge row-by-row (mergeReconnect/mergeByUpdatedAt above) instead of a
+      // blind push-then-pull. This device may have kept working (safely, in
+      // IndexedDB) through a stretch where the connection was stuck needing
+      // reauth — a pull()-only reconnect used to blindly overwrite local data
+      // with a stale sheet, silently erasing everything typed while
+      // disconnected (confirmed 2026-07-13, reported directly: "once I
+      // signed back in everything was cleared"). Fixing THAT by always
+      // pushing local up first, then pulling, went too far the other way: it
+      // assumed this device is the only one that could have changed
+      // anything since the sheet was last touched, which isn't true if
+      // another device also connected and edited the same sheet during this
+      // device's lapse — that ordering silently overwrote the OTHER device's
+      // newer edits with this device's stale ones instead (reported
+      // directly, 2026-07-23: "so if the user decide to log from another
+      // device then its lost"). Merging by updatedAt per row keeps both
+      // fixes at once — nothing typed offline on this device is lost, and
+      // nothing edited meanwhile on another device is either; only a genuine
+      // edit to the SAME row on both sides has to pick a winner, and it
+      // picks whichever actually happened later. (Known gap: this can't
+      // distinguish "deleted on the other device" from "never existed
+      // there" without deletion tombstones, which this schema doesn't have
+      // yet — see mergeByUpdatedAt's doc comment.)
       onPhase?.("saving");
-      await pushAll(true);
-      await pull(true);
+      await mergeReconnect(existing, true);
       await syncAccessCode(existing, true);
       return existing;
     } catch (err) {
