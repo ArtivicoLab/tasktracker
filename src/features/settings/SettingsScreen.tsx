@@ -318,6 +318,14 @@ export function SettingsScreen() {
                 5-minute Google Cloud setup.
               </div>
             )}
+            {busy && hasClientId && (
+              <p className="muted settings-hint--sm">
+                Waiting on Google's sign-in popup — if you don't see it, check your address bar
+                for a blocked-popup icon and allow it for this site. This app isn't verified with
+                Google yet, so it may show an "unverified app" warning first; that's expected,
+                just click through it. This can take up to a minute or so.
+              </p>
+            )}
             {!activated && (
               <p className="muted settings-hint--sm">
                 Enter your product code above to enable Connect, or if you've already set up
