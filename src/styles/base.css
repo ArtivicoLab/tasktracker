@@ -267,17 +267,18 @@ h3 {
 
 /* ---------- Header (status pill + avatar) ---------- */
 .appbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  /* Not sticky on purpose — nothing in here (brand, sync status, Coach Tour,
+     the Settings shortcut) is something a user needs constant access to
+     while scrolling a long list; Settings/nav are already always reachable
+     via the tab bar. Scrolls away with the rest of the page like everything
+     else, instead of permanently eating into a phone screen's vertical
+     space (reported directly, 2026-07-23). */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-2);
   padding: calc(var(--safe-top) + 8px) var(--sp-4) 8px;
-  background: color-mix(in srgb, var(--bg) 68%, transparent);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  background: var(--bg);
 }
 .appbar__brand {
   display: inline-flex;
