@@ -140,9 +140,10 @@ export function TaskInsights({
     hue: "sky" | "teal" | "pink";
     pop: "lemon" | "pink" | "cyan";
     rot: "sticker-rot-a" | "sticker-rot-b" | "sticker-rot-c";
+    swing?: boolean;
   }[] = [];
   if (s.dueTomorrow > 0) {
-    alerts.push({ icon: IconBell, hue: "sky", pop: "lemon", rot: "sticker-rot-b", text: `${s.dueTomorrow} task${s.dueTomorrow > 1 ? "s" : ""} due tomorrow` });
+    alerts.push({ icon: IconBell, hue: "sky", pop: "lemon", rot: "sticker-rot-b", text: `${s.dueTomorrow} task${s.dueTomorrow > 1 ? "s" : ""} due tomorrow`, swing: true });
   }
   if (s.total > 0) {
     alerts.push({ icon: IconCheck, hue: "teal", pop: "pink", rot: "sticker-rot-a", text: `Completed ${Math.round(s.completionPct * 100)}% of tasks` });
@@ -170,7 +171,7 @@ export function TaskInsights({
                 background: "var(--surface)", border: "2px solid var(--outline)",
                 color: `var(--cat-${a.hue}-deep)`,
               }}>
-                <a.icon size={15} />
+                <a.icon size={15} className={a.swing ? "icon-swing" : undefined} />
               </span>
               <span style={{ fontSize: 14, fontWeight: 700, color: "var(--ink)" }}>{a.text}</span>
             </div>

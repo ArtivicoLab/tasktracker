@@ -802,6 +802,32 @@ h3 {
   }
 }
 
+/* The "N tasks due tomorrow" alert's bell icon gives it a gentle ring — a
+   pendulum swing (pivoting from the top, not spinning in place) that decays
+   through a few progressively smaller swings before settling, same shape as
+   a real bell winding down rather than a uniform mechanical back-and-forth.
+   Rings once, rests for the rest of the cycle, then rings again — a
+   continuous nonstop swing would fight the app's "no notification firehose"
+   principle for a persistent banner. */
+.icon-swing {
+  transform-origin: 50% 10%;
+  animation: icon-swing 4.5s ease-in-out infinite;
+}
+@keyframes icon-swing {
+  0% { transform: rotate(0deg); }
+  4% { transform: rotate(16deg); }
+  10% { transform: rotate(-12deg); }
+  16% { transform: rotate(9deg); }
+  22% { transform: rotate(-6deg); }
+  28% { transform: rotate(3deg); }
+  34%, 100% { transform: rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .icon-swing {
+    animation: none;
+  }
+}
+
 /* Dashboard's last chart row (activity timeline / person-in-charge): a
    plain vertical stack on phone (spaced by the inherited `.card + .card`
    margin), side by side on wide screens instead of each stretching across
