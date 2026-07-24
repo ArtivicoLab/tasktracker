@@ -14,8 +14,25 @@ const TIPS: string[] = [
   "A long list is loud. Filter down to just Today and breathe.",
 ];
 
-export function TipBanner() {
+export function TipBanner({ inline }: { inline?: boolean }) {
   const tip = TIPS[new Date().getDate() % TIPS.length];
+
+  // Dropped inside another card (Dashboard's activity timeline) instead of
+  // standing alone as its own full-width sticker — a plain, borderless row
+  // so it reads as that card's closing line, not a second competing card.
+  if (inline) {
+    return (
+      <div className="tip-inline">
+        <span className="tip-inline__icon">
+          <IconZap size={13} />
+        </span>
+        <span className="tip-inline__text">
+          <strong>ADHD tip:</strong> {tip}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       className="card pop-grape sticker-rot-b"

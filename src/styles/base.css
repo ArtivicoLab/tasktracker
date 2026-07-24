@@ -776,17 +776,82 @@ h3 {
 /* Same fix, same reason — .alert-stack sets its own gap (14px, roomier than
    the default 12px so tilted sticker corners don't visually crowd), and its
    children are .card too. */
+.alert-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
 .alert-stack > .card + .card {
   margin-top: 0;
 }
-/* Dashboard's compact chart row (ring + status/category/priority donuts) —
-   same margin-bleed fix, same reason: these are grid children, not a
-   vertical stack, so the inherited `.card + .card` margin must be zeroed
-   and real grid `gap` used instead. */
+/* On wide screens the stacked full-width alert pills read as three huge
+   stripes — sit them side by side instead. Content-hugging (flex: 0 0 auto),
+   not stretched to equal thirds: a short alert like "3 overdue" stretched to
+   ~500px wide is the same "wide row of nothing" problem in miniature. Real
+   stickers keep their tilt/shadow personality either way, just sized to
+   their own text instead of the column width. */
+@media (min-width: 900px) {
+  .alert-stack {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+  .alert-stack > .card {
+    flex: 0 0 auto;
+  }
+}
+
+/* Dashboard's last chart row (activity timeline / person-in-charge): a
+   plain vertical stack on phone (spaced by the inherited `.card + .card`
+   margin), side by side on wide screens instead of each stretching across
+   the entire viewport with a few bars lost in whitespace. Timeline gets
+   the wider share — same 1.6/1 ratio as the Today/Upcoming row above, for
+   the same reason (matches the reference mockup's own timeline-wide/
+   person-narrower row). Priority-by-category used to be a third card here
+   (tallest, spanning both grid rows) — it's now folded into the Category
+   and Priority donut cards themselves instead, see TaskInsights.tsx. */
+.insights-wide-grid {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 1100px) {
+  .insights-wide-grid {
+    flex-direction: row;
+    align-items: stretch;
+    gap: var(--sp-4);
+  }
+  .insights-wide-grid > .card + .card {
+    margin-top: 0;
+  }
+  .insights-wide-grid__timeline {
+    flex: 1.6;
+    min-width: 0;
+  }
+  .insights-wide-grid > .card:not(.insights-wide-grid__timeline) {
+    flex: 1;
+    min-width: 280px;
+  }
+}
+/* Dashboard's compact chart row (completion ring+status / category / priority
+   donuts) — same margin-bleed fix, same reason: these are grid children, not
+   a vertical stack, so the inherited `.card + .card` margin must be zeroed
+   and real grid `gap` used instead. `align-items: start` keeps each card its
+   own natural height — the ring card can run tall (ring + a status list
+   under it) and a default `stretch` would drag the two donut cards down to
+   match, leaving a lot of dead space under their own, shorter content. */
 .insights-compact-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--sp-4);
+  /* Equal height across the row (the grid default — not overridden), same
+     as .dash-row0 above: two bordered "sticker" cards sitting side by side
+     at different heights leaves a visible gap under the shorter one, which
+     reads as an unfinished/jagged row rather than a clean grid (reported
+     directly, 2026-07-23). Category and Priority now embed their own
+     SegmentedBars breakdown too, so they're rarely far off the ring card's
+     height anyway. */
 }
 .insights-compact-grid > .card + .card {
   margin-top: 0;
@@ -913,27 +978,35 @@ h3 {
 
 /* ---------- KPI strip (dashboard) ----------
    One card, divided by hairlines — not four-to-eight separate shadowed
-   tiles. Wraps to more than one row on narrow screens (a phone can't fit
-   8-across), and each wrapped row keeps its own hairline divider under it
-   via border-top, so the grid still reads as one continuous strip instead
-   of floating fragments. */
+   tiles. Used to wrap to more than one row on narrow screens and shrink
+   each tile's number via a container query to keep fitting — which meant
+   the numbers visibly resized as the window resized, and on medium widths
+   (too narrow for 8-across, too wide to want 2 short rows) it looked
+   cramped. Same idiom as .tasks-table-scroll/.chip-row elsewhere in this
+   file: give tiles a real, fixed floor width and let the strip scroll on
+   the x-axis past that, instead of squishing content to fit (reported
+   directly, 2026-07-23). */
 .statgrid {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
   background: var(--surface);
   border: 2px solid var(--outline);
   border-radius: var(--r-card);
   box-shadow: var(--shadow);
-  overflow: hidden;
   margin-bottom: var(--sp-4);
 }
+.statgrid::-webkit-scrollbar {
+  display: none;
+}
 .stat {
-  flex: 1 1 130px;
+  flex: 1 0 130px;
   padding: var(--sp-4) var(--sp-4) 13px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 0;
   container-type: inline-size;
   border-left: 1px solid var(--hairline);
   margin-left: -1px;
@@ -2581,7 +2654,13 @@ textarea.input {
     max-width: none;
   }
   .app__main--wide {
-    max-width: none;
+    /* The dashboard is dense but not infinitely stretchable — past ~1500px
+       the charts turn into thin ribbons with bars lost in whitespace.
+       Cap and center it (auto inline margins center a max-width'd grid
+       item within its column). */
+    width: 100%;
+    max-width: 1520px;
+    margin-inline: auto;
   }
   .sidebar {
     display: flex;
@@ -2934,15 +3013,16 @@ textarea.input {
 /* Today is the hero card: solid surface + real elevation + accent edge so it
    ADVANCES against the pink background (a pink tint made it recede). */
 .card--today {
-  /* Explicit margin, not the usual `.card + .card` adjacent-sibling rule —
-     this card isn't a direct sibling of TaskInsights' last card (Person In
-     Charge sits one level deeper, inside TaskInsights' own wrapper div), so
-     the adjacent-sibling selector never matched here to begin with. */
-  margin-top: var(--sp-3);
   background: var(--surface);
   padding: 20px;
   box-shadow: var(--shadow);
-  border: 1px solid var(--accent-soft);
+  /* Used to override to a faint 1px accent-soft border — thinner AND paler
+     than every other card's bold 2px ink outline (border: 2px solid
+     var(--outline), set on the base .card rule below), which made Today
+     read as weaker/fainter than its own Upcoming sibling right next to it
+     (reported directly, 2026-07-23). Just the bigger elevated shadow now
+     carries its "hero card" weight; the outline stays consistent with
+     every other card, including .dash-upcoming-card next to it. */
 }
 .card--today .row__title {
   font-size: 17px;
@@ -3062,6 +3142,49 @@ textarea.input {
   font-size: 12px;
   font-weight: 800;
 }
+/* Today + Upcoming: a plain vertical stack of two full-width cards on
+   phone (each already a `.card`, spaced by the inherited `.card + .card`
+   margin — zeroed and replaced with real `gap` at the wide breakpoint
+   below, same pattern as `.insights-wide-grid`). At ≥1100px they sit side
+   by side — Today gets the wider share (it's the denser list: today's
+   items + the overdue cluster), Upcoming a narrower fixed-ish column —
+   instead of each stretching full width with rows that have nothing to
+   fill the space (reported directly from a wide-screen screenshot,
+   2026-07-22). Default flex `align-items: stretch` (not overridden) so the
+   two cards read as a matched pair at the same height, Upcoming's own
+   content top-aligned within that height — matching the mockup's row,
+   which never overrode `stretch` either (reported directly, 2026-07-23). */
+.dash-row0 {
+  /* Lives here, not on .card--today — this row (not the Today card
+     specifically) is what sits right after DashboardHero, and Hero isn't a
+     `.card`, so the normal `.card + .card` cascade never gives it a gap on
+     its own. Used to be set directly on .card--today's own margin-top, which
+     worked fine when Today was the only card here, but once Upcoming became
+     a sibling `.card` INSIDE this row, that margin only pushed Today down —
+     Upcoming had no matching top margin, so the pair sat visibly misaligned
+     at the top edge (reported directly from a screenshot, 2026-07-23). */
+  margin-top: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 1100px) {
+  .dash-row0 {
+    flex-direction: row;
+    gap: var(--sp-4);
+  }
+  .dash-row0 > .card + .card {
+    margin-top: 0;
+  }
+  .dash-row0 > .card--today {
+    flex: 1.6;
+    min-width: 0;
+  }
+  .dash-row0 > .dash-upcoming-card {
+    flex: 1;
+    min-width: 320px;
+    max-width: 420px;
+  }
+}
 .dash-overdue {
   padding: 0 0 10px;
 }
@@ -3106,14 +3229,39 @@ textarea.input {
   color: var(--accent);
   flex: none;
 }
-.dash-upcoming {
-  padding: 10px 0 6px;
+/* Its own card now (was nested inside .card--today) — see .dash-row0 above. */
+.dash-upcoming-card {
+  /* Same padding as .card--today (20px, vs. the base .card default of
+     var(--sp-4) = 16px) — sitting right next to it as a matched pair made
+     the plain default read as tighter/cramped by comparison (reported
+     directly, 2026-07-23). */
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+/* Stretched to match Today's height (see .dash-row0 above) — pin the
+   "+more" link to the card's bottom edge instead of leaving it stranded
+   right under the last row with a dead gap below, so the extra height
+   reads as intentional. Scoped to this card only: `margin-top: auto` is a
+   no-op on .dash-more-link's OTHER use site (.dash-overdue is a plain
+   block container, not flex, where auto margins don't apply), so this
+   can't affect that link's placement. */
+.dash-upcoming-card .dash-more-link {
+  margin-top: auto;
+  padding-top: var(--sp-2);
+}
+.dash-upcoming-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  padding: var(--sp-2) 0 var(--sp-1);
 }
 .dash-upcoming-row {
   opacity: 0.75;
 }
-.dash-checkbox-spacer {
-  width: 26px;
+.dash-upcoming__dot {
+  flex: none;
 }
 .dash-upcoming__due {
   font-size: 12px;
@@ -3457,11 +3605,19 @@ textarea.input {
   position: relative;
   flex: none;
   border-radius: 50%;
+  /* Without an outline the conic-gradient segments blend straight into the
+     card background at their edges and read as pale/washed out, especially
+     the lighter category hues — the ink outline is what makes a flat color
+     shape pop, same principle as every other "sticker" element in the app
+     (border: 2px solid var(--outline) is the base .card treatment too).
+     Reported directly, 2026-07-23: "the colors are still faint". */
+  border: 2px solid var(--outline);
 }
 .chart-donut__hole {
   position: absolute;
   border-radius: 50%;
   background: var(--surface);
+  border: 2px solid var(--outline);
   display: grid;
   place-items: center;
   text-align: center;
@@ -3482,6 +3638,13 @@ textarea.input {
   width: 10px;
   height: 10px;
   border-radius: 3px;
+  /* A tiny flat color square with no edge definition reads as a faint pastel
+     smudge at this size — the same ink-outline fix as the ring above. */
+  border: 1.5px solid var(--outline);
+}
+.chart-donut__slice-pct {
+  font-weight: 800;
+  color: var(--ink);
 }
 .chart-statusbar__track {
   display: flex;
@@ -3550,6 +3713,198 @@ textarea.input {
 }
 .chart-stackedcolumns__seg {
   flex: none;
+}
+/* Desktop cards are far wider than a phone's — 26px bars float in a sea of
+   empty track. Let them thicken a little so the charts keep their weight. */
+@media (min-width: 900px) {
+  .chart-column__bar,
+  .chart-stackedcolumns__bar {
+    max-width: 38px;
+    border-radius: 8px;
+  }
+}
+
+/* ---- RankedBars (see Charts.tsx) — dot, fixed-width label, thin
+   proportional track, right-aligned percentage. One row per status. ---- */
+.chart-rankedbars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chart-rankedbars__row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.chart-rankedbars__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
+  border: 1.5px solid var(--outline);
+}
+.chart-rankedbars__label {
+  width: 78px;
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-rankedbars__track {
+  flex: 1;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+}
+.chart-rankedbars__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+}
+.chart-rankedbars__pct {
+  width: 34px;
+  flex: none;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- PeopleBars (see Charts.tsx) — avatar, name, horizontal proportional
+   track, count. Replaces a vertical column chart for "count per person":
+   see the reasoning comment in Charts.tsx. ---- */
+.chart-peoplebars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.chart-peoplebars__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chart-peoplebars__label {
+  width: 68px;
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-peoplebars__track {
+  flex: 1;
+  height: 11px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+}
+.chart-peoplebars__avatar {
+  border: 2px solid var(--outline);
+}
+.chart-peoplebars__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+}
+.chart-peoplebars__value {
+  width: 26px;
+  flex: none;
+  text-align: right;
+  font-size: 12.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- SegmentedBars (see Charts.tsx) — right-aligned fixed-width label,
+   a bordered pill track split into colored segments, the row total in the
+   display face. Embedded under the Category/Priority donut cards. ---- */
+.chart-segbars {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.chart-segbars__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chart-segbars__label {
+  text-align: right;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chart-segbars__track {
+  flex: 1;
+  display: flex;
+  height: 13px;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 2px solid var(--outline);
+}
+.chart-segbars__seg {
+  display: block;
+  height: 100%;
+}
+.chart-segbars__count {
+  width: 24px;
+  flex: none;
+  text-align: right;
+  font-family: var(--font-display);
+  font-size-adjust: 0.5;
+  font-size: 13px;
+  /* Titan One only ships weight 400 — see the repeated note elsewhere in
+     this file; any other weight triggers browser faux-bolding. */
+  font-weight: 400;
+}
+/* Dashed divider between a card's top section (ring/donut + legend) and an
+   embedded breakdown below it — matches the reference mockup's convention
+   (used throughout it: between list rows, between a donut and its embedded
+   bars) of a dashed rule rather than a plain solid hairline for this kind
+   of "related but secondary" section break. */
+.chart-section-divider {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 2px dashed var(--hairline);
+}
+
+/* ---- Inline ADHD tip (TipBanner's `inline` variant) — a plain closing
+   line docked inside another card (the dashboard's activity timeline),
+   not a second standalone sticker. See the "kept" tip banner styles above
+   for the full standalone card version, still used on the Tasks screen. */
+.tip-inline {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.tip-inline__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--cat-lavender-soft);
+  color: var(--cat-lavender-deep);
+}
+.tip-inline__text strong {
+  color: var(--ink);
 }
 
 /* ---------- Task-complete celebration (Celebration.tsx) ---------- */

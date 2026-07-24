@@ -8,8 +8,9 @@
 // product (or the user) actually wants front and center.
 import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Donut, Columns, StackedColumns } from "../../components/Charts";
+import { Donut, RankedBars, PeopleBars, SegmentedBars, StackedColumns } from "../../components/Charts";
 import { ProgressRing } from "../../components/ProgressRing";
+import { TipBanner } from "../../components/TipBanner";
 import { IconBell, IconCheck, IconHeart } from "../../components/icons";
 import { addDaysISO, daysBetween, fromISO, format } from "../../lib/dates";
 import {
@@ -18,6 +19,7 @@ import {
   PRIORITY_LABEL,
   STATUS_COLOR,
   STATUS_LABEL,
+  stringColor,
 } from "../../lib/ui";
 import { PRIORITIES, STATUSES } from "../../lib/types";
 import type { AgendaItem } from "./agenda";
@@ -61,13 +63,17 @@ export function TaskInsights({
       color: PRIORITY_COLOR[p],
     })).filter((x) => x.value > 0);
 
-    // priority by category (open items only)
+    // priority by category (open items only) — pre-shaped for SegmentedBars
+    // (Charts.tsx), embedded under both the Category and Priority donuts.
     const priByCat = categories.map((cat) => {
       const open = items.filter((i) => i.category === cat && !i.done);
       return {
-        cat,
+        label: cat,
         total: open.length,
-        byPri: PRIORITIES.map((p) => ({ p, n: open.filter((i) => i.priority === p).length })),
+        segments: PRIORITIES.map((p) => ({
+          value: open.filter((i) => i.priority === p).length,
+          color: PRIORITY_COLOR[p],
+        })),
       };
     }).filter((c) => c.total > 0);
 
@@ -84,7 +90,7 @@ export function TaskInsights({
     // person in charge — task count per assignee
     const people = Array.from(new Set(items.map((i) => i.assignee).filter(Boolean)));
     const byPerson = people
-      .map((name) => ({ label: name, value: items.filter((i) => i.assignee === name).length }))
+      .map((name) => ({ label: name, value: items.filter((i) => i.assignee === name).length, color: stringColor(name) }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 6);
 
@@ -107,11 +113,16 @@ export function TaskInsights({
     };
   }, [items, today, categories]);
 
-  const kpis: { label: string; value: string; alert?: boolean }[] = [
+  // Overdue already stood out in --alert red; Completion/Completed were
+  // plain ink even though they're the "good news" numbers on this strip —
+  // mirrors the mockup's hot/good KPI coloring, reusing --success (already
+  // a deep green in light mode, bright mint-green in dark) rather than
+  // inventing a new token.
+  const kpis: { label: string; value: string; alert?: boolean; good?: boolean }[] = [
     { label: "Total tasks", value: String(s.total) },
-    { label: "Completion", value: `${Math.round(s.completionPct * 100)}%` },
+    { label: "Completion", value: `${Math.round(s.completionPct * 100)}%`, good: s.completionPct > 0 },
     { label: "Ongoing", value: String(s.ongoing) },
-    { label: "Completed", value: String(s.completed) },
+    { label: "Completed", value: String(s.completed), good: s.completed > 0 },
     { label: "Overdue", value: String(s.overdue), alert: s.overdue > 0 },
     { label: "Due today", value: String(s.dueToday) },
     { label: "Due ≤ 7 days", value: String(s.due7) },
@@ -143,7 +154,7 @@ export function TaskInsights({
   return (
     <div style={{ marginBottom: 4 }} data-tour="tasks-insights">
       {alerts.length > 0 && (
-        <div className="alert-stack" style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 16 }}>
+        <div className="alert-stack">
           {alerts.map((a) => (
             <div
               key={a.text}
@@ -171,7 +182,7 @@ export function TaskInsights({
       <div className="statgrid" style={{ marginBottom: 10 }}>
         {kpis.map((k) => (
           <div key={k.label} className="stat" style={{ cursor: "default" }}>
-            <span className="stat__value" style={{ color: k.alert ? "var(--alert)" : undefined }}>
+            <span className="stat__value" style={{ color: k.alert ? "var(--alert)" : k.good ? "var(--success)" : undefined }}>
               {k.value}
             </span>
             <span className="stat__label">{k.label}</span>
@@ -179,34 +190,59 @@ export function TaskInsights({
         ))}
       </div>
 
-      {/* The ring + 3 donuts are all roughly the same compact width — one
-          per full-width row each wasted most of a wide desktop screen.
-          A wrapping grid lets 2-4 share a row depending on viewport, down
+      {/* The ring and the 2 donuts are all roughly the same compact width —
+          one per full-width row each wasted most of a wide desktop screen.
+          A wrapping grid lets 2-3 share a row depending on viewport, down
           to 1-per-row on mobile. Uses grid `gap`, not the `.card + .card`
           margin trick (that only works for a single vertical stack) — see
-          the scoped override right below. */}
+          the scoped override right below. `align-items: start` (also in
+          that override) keeps each card its own natural height instead of
+          stretching the shorter donut cards to match the ring card, which
+          can now run tall (a status list under the ring) — a stretched
+          donut card just shows a lot of empty space under its own content. */}
       <div className="insights-compact-grid" style={{ marginTop: 10 }}>
           <div className="card">
             <div className="spread" style={{ marginBottom: 10 }}>
               <div className="muted" style={{ fontSize: 12, fontWeight: 700 }}>OVERALL COMPLETION</div>
+              <span className="muted" style={{ fontSize: 11, fontWeight: 600 }}>{s.total} tasks</span>
             </div>
             <div style={{ display: "grid", placeItems: "center" }}>
               <ProgressRing value={s.completionPct} size={110} stroke={12} showPct label="done"
                 ariaLabel={`${s.completed} of ${s.total} tasks done`} />
             </div>
+            {/* Status used to be its own donut card — with usually one or two
+                statuses doing almost all the work (Completed, Not Started)
+                and the rest rounding to 0-1%, a donut just drew unreadable
+                slivers for them. A ranked bar list states the exact
+                percentage instead, and folding it into the completion card
+                means the two REAL breakdown donuts (Category, Priority)
+                below get an equal-width row to themselves instead of
+                competing with a near-empty third. */}
+            {s.byStatus.length > 0 && (
+              <div className="chart-section-divider">
+                <RankedBars items={s.byStatus} />
+              </div>
+            )}
           </div>
 
-          {s.byStatus.length > 0 && (
-            <div className="card">
-              <div className="muted" style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>STATUS</div>
-              <Donut slices={s.byStatus} size={104} thickness={16} />
-            </div>
-          )}
-
+          {/* Category and Priority each fold their own priority-by-category
+              breakdown in underneath (dashed divider, then SegmentedBars) —
+              used to live pulled out as one separate full-width "Priority by
+              category" card instead, but showing it right under BOTH donuts
+              it's actually a breakdown OF matches the mockup's own reference
+              layout for these two cards exactly (reported directly with a
+              screenshot, 2026-07-23) and reads more naturally as "here's the
+              donut, and here's that same mix spelled out per category" than
+              as an unrelated fourth card. */}
           {s.byCategory.length > 0 && (
             <div className="card">
               <div className="muted" style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>CATEGORY</div>
               <Donut slices={s.byCategory} size={104} thickness={16} />
+              {s.priByCat.length > 0 && (
+                <div className="chart-section-divider">
+                  <SegmentedBars rows={s.priByCat} />
+                </div>
+              )}
             </div>
           )}
 
@@ -214,46 +250,41 @@ export function TaskInsights({
             <div className="card">
               <div className="muted" style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>PRIORITY</div>
               <Donut slices={s.byPriority} size={104} thickness={16} />
+              {s.priByCat.length > 0 && (
+                <div className="chart-section-divider">
+                  <SegmentedBars rows={s.priByCat} />
+                </div>
+              )}
             </div>
           )}
       </div>
 
-      {/* No flex `gap` — same margin-bleed as the alerts wrapper above; the
-          inherited `.card + .card` margin-top already spaces these out. */}
-      <div style={{ marginTop: 10, display: "flex", flexDirection: "column" }}>
-          {s.priByCat.length > 0 && (
-            <div className="card">
-              <div className="muted" style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>PRIORITY BY CATEGORY</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-                {s.priByCat.map((c) => (
-                  <div key={c.cat}>
-                    <div className="spread" style={{ fontSize: 12, marginBottom: 3 }}>
-                      <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
-                        <span style={{ width: 9, height: 9, borderRadius: 3, background: categoryColor(c.cat) }} />
-                        {c.cat}
-                      </span>
-                      <span className="muted">{c.total}</span>
-                    </div>
-                    <div style={{ display: "flex", height: 10, borderRadius: 999, overflow: "hidden", background: "var(--surface-2)" }}>
-                      {c.byPri.filter((b) => b.n > 0).map((b) => (
-                        <div key={b.p} title={`${PRIORITY_LABEL[b.p]}: ${b.n}`} style={{ flex: b.n, background: PRIORITY_COLOR[b.p] }} />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="card">
+      {/* Vertical stack on phone (spaced by the inherited `.card + .card`
+          margin); side by side on wide screens — Timeline gets the wider
+          share (matches the Today/Upcoming split's own 1.6/1 ratio), Person
+          a narrower column. See .insights-wide-grid in base.css. */}
+      <div className="insights-wide-grid">
+          <div className="card insights-wide-grid__timeline">
             <div className="muted" style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>TASK ACTIVITY TIMELINE</div>
             <StackedColumns points={s.activity} height={110} labelA="Completed" labelB="Pending" />
+            {/* Docked here instead of standing alone as a 4th full-width
+                sticker at the very bottom of the page — this card is the
+                natural last stop in the reading order, so its closing line
+                doesn't need a whole extra card of its own. */}
+            <TipBanner inline />
           </div>
 
           {s.byPerson.length > 0 && (
             <div className="card">
               <div className="muted" style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>PERSON IN CHARGE</div>
-              <Columns points={s.byPerson} height={110} color="var(--accent-2)" />
+              {/* Horizontal bars, not vertical columns — a column chart
+                  scales bar HEIGHT to the busiest person, and "Me" usually
+                  owns most tasks, so everyone else rendered as a sliver a
+                  couple pixels tall (reported directly from the wide-screen
+                  screenshot: Sophie/Michael/Emily/Alice/David were barely
+                  visible next to "Me"'s bar). A horizontal track has far
+                  more room to stay legible at the low end. */}
+              <PeopleBars points={s.byPerson} />
             </div>
           )}
       </div>
