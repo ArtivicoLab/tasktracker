@@ -12,10 +12,12 @@
 // sync.connect) — a logged-in user should see their own blank planner.
 import { create } from "zustand";
 
-// TEMP (screenshots): when true, the "(demo)" brand suffix and the demo banner
-// are hidden so the populated sample app can be captured clean. Sample DATA
-// still shows. Flip back to false when done.
-export const HIDE_DEMO_CHROME = true;
+// When true, the "(demo)" brand suffix and the demo banner are hidden so a
+// populated sample app can be captured clean for marketing screenshots.
+// Sample DATA still shows either way — this only hides the demo-mode
+// chrome. Off by default; flip on temporarily when shooting screenshots,
+// then back off so real visitors see the demo indicator again.
+export const HIDE_DEMO_CHROME = false;
 
 const DEMO_KEY = "demoMode";
 
