@@ -68,6 +68,13 @@ async function runBootstrap() {
   // actually hydrated — see resumePendingPush()'s own doc comment for why
   // this can't run any earlier (e.g. useSync.ts's own module-eval time).
   resumePendingPush();
+  // Fire-and-forget backfill for anyone who connected before this device
+  // recorded which Google account it used — silent-only (false): a boot step
+  // has no user click behind it and must never pop an interactive account
+  // chooser. Not awaited, so a slow/offline lookup never delays boot.
+  if (sync.isConnected() && !useSettings.getState().googleAccountEmail) {
+    void sync.rememberAccountEmail(false);
+  }
 }
 
 /**

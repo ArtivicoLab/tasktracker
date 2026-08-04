@@ -539,6 +539,20 @@ h3 {
 .syncpill--off .syncpill__dot {
   background: var(--warn);
 }
+.syncpill__email {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+@media (max-width: 420px) {
+  .syncpill__email {
+    max-width: 90px;
+  }
+}
 @keyframes pulse {
   50% {
     opacity: 0.3;

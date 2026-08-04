@@ -1,6 +1,7 @@
 import { IconCompass, IconSettings } from "./icons";
 import { navigate, useRoute } from "../router";
 import { useSync } from "../stores/useSync";
+import { useSettings } from "../stores/useSettings";
 import { HIDE_DEMO_CHROME, useDemo } from "../lib/demo";
 import { ROUTE_LABELS } from "../nav";
 import { APP_NAME } from "../lib/config";
@@ -13,6 +14,7 @@ const LABEL: Record<string, string> = {
 
 export function Header({ onCoachTour }: { onCoachTour: () => void }) {
   const { status, pending, connected, needsReauth, busy, tapToRetry } = useSync();
+  const { googleAccountEmail } = useSettings();
   const demo = useDemo((s) => s.demo);
   const route = useRoute();
   // Stuck sync must always have a manual escape hatch, not just the specific
@@ -32,6 +34,7 @@ export function Header({ onCoachTour }: { onCoachTour: () => void }) {
         : !connected && status === "synced"
           ? "Saved"
           : LABEL[status];
+  const showEmail = connected && !!googleAccountEmail;
 
   return (
     <header className="appbar">
@@ -54,20 +57,22 @@ export function Header({ onCoachTour }: { onCoachTour: () => void }) {
           onClick={() => tapToRetry()}
           title={
             needsReauth
-              ? "Your Google connection lapsed after being idle a while. Tap to sign in again, nothing was lost"
+              ? `Your Google connection lapsed after being idle a while. Tap to sign in again${googleAccountEmail ? ` as ${googleAccountEmail}` : ""}, nothing was lost`
               : "Tap to retry syncing now"
           }
         >
           <span className="syncpill__dot" />
           {busy ? (needsReauth ? "Reconnecting…" : "Syncing…") : text}
+          {showEmail && <span className="syncpill__email">{googleAccountEmail}</span>}
         </button>
       ) : (
         <span
           className={`syncpill ${cls}`}
-          title={connected ? "Synced to your Google Sheet" : "Stored on this device"}
+          title={connected ? `Synced to your Google Sheet${googleAccountEmail ? ` (${googleAccountEmail})` : ""}` : "Stored on this device"}
         >
           <span className="syncpill__dot" />
           {text}
+          {showEmail && <span className="syncpill__email">{googleAccountEmail}</span>}
         </span>
       ))}
       <button

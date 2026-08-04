@@ -19,6 +19,7 @@ import {
   batchGet,
   createSpreadsheet,
   ensureTabs,
+  fetchAccountEmail,
   ReauthRequiredError,
   SheetNotFoundError,
   SheetPermissionDeniedError,
@@ -484,6 +485,36 @@ async function syncAccessCode(id: string, allowInteractive: boolean): Promise<vo
   }
 }
 
+/** The Google account email last confirmed to work for this device's sync
+ * connection ("" = never recorded) — read straight from the Settings store. */
+export function getAccountEmail(): string {
+  return useSettings.getState().googleAccountEmail;
+}
+
+/**
+ * Best-effort: look up the currently signed-in Google account's email (Drive
+ * about.get, see fetchAccountEmail) and remember it in Settings if it's
+ * non-empty and different from what's already stored. A buyer with several
+ * Google accounts otherwise has no way to know which one to pick at the
+ * account chooser on reauth or a new device.
+ *
+ * Deliberately only ever called at the tail of an ALREADY-successful
+ * connect/relink/reauth (see call sites below) — remembering a wrong or
+ * failed guess would defeat the whole point. Never throws: this must never
+ * break a sync flow that just succeeded, so any failure here is swallowed
+ * silently, leaving whatever was previously remembered (if anything) in place.
+ */
+export async function rememberAccountEmail(allowInteractive: boolean): Promise<void> {
+  try {
+    const email = await fetchAccountEmail(allowInteractive);
+    if (email && email !== useSettings.getState().googleAccountEmail) {
+      useSettings.getState().update({ googleAccountEmail: email });
+    }
+  } catch {
+    /* best-effort only */
+  }
+}
+
 /**
  * Reconnect for the common "token just expired, tab sat open a while" case —
  * tapToRetry()'s needsReauth branch. This is actually the MOST likely real
@@ -544,6 +575,7 @@ export async function reauth(): Promise<void> {
     if (!id) return;
     await mergeReconnect(id, true);
   });
+  await rememberAccountEmail(true);
 }
 
 export type ConnectPhase = "token" | "linking" | "creating" | "saving";
@@ -624,6 +656,7 @@ export async function connect(onPhase?: (phase: ConnectPhase) => void): Promise<
       onPhase?.("saving");
       await mergeReconnect(existing, true);
       await syncAccessCode(existing, true);
+      await rememberAccountEmail(true);
       return existing;
     } catch (err) {
       if (err instanceof SheetNotFoundError) {
@@ -651,6 +684,7 @@ export async function connect(onPhase?: (phase: ConnectPhase) => void): Promise<
   onPhase?.("saving");
   await pushAll(true); // seed the new sheet with whatever is on-device now
   await syncAccessCode(id, true);
+  await rememberAccountEmail(true);
   return id;
 }
 
@@ -692,6 +726,7 @@ export async function createNewSheet(): Promise<string> {
   setSpreadsheetId(id);
   await pushAll(true); // seed the new sheet with whatever is on-device now
   await syncAccessCode(id, true);
+  await rememberAccountEmail(true);
   return id;
 }
 
@@ -726,6 +761,7 @@ export async function relink(idOrUrl: string): Promise<void> {
   setSpreadsheetId(id);
   await pull(true);
   await syncAccessCode(id, true);
+  await rememberAccountEmail(true);
 }
 
 /**

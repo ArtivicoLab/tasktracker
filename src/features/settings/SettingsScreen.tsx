@@ -30,7 +30,7 @@ function formatWait(ms: number): string {
 export function SettingsScreen() {
   const {
     name, theme, weekStart, digestTime, householdMembers, categories,
-    categoryColors, tabBarRoutes, activated, accessCode,
+    categoryColors, tabBarRoutes, activated, accessCode, googleAccountEmail,
     celebrateConfetti, celebrateSound, update,
   } = useSettings();
   const { connected, spreadsheetId, previousSpreadsheetId, hasClientId, busy, error, wrongAccount, connect, relink, syncNow, useThisAccountInstead, startNewSheet, pushCelebratePrefs } =
@@ -255,6 +255,9 @@ export function SettingsScreen() {
                 <div className="muted fs-13">
                   Your data lives in your own Google Drive.
                 </div>
+                {googleAccountEmail && (
+                  <div className="muted fs-13">Signed in as <b>{googleAccountEmail}</b></div>
+                )}
                 {accessCode && (
                   <div className="muted fs-13">Unlocked with code {accessCode}</div>
                 )}

@@ -66,6 +66,7 @@ export interface Settings {
   tabBarRoutes: string[]; // pinned routes shown in the mobile bottom bar, in order ("more" is always appended, never stored here)
   accessCode: string; // Etsy purchase code the buyer entered ("" = not activated)
   activated: boolean; // true once a valid accessCode was entered — unlocks Google Sheets connect
+  googleAccountEmail: string; // email of the Google account the sync connection last worked with, recorded ONLY after a successful sheet operation ("" = never connected/unknown) — local-only, per device, so reauth/a new device can show which of several Google accounts to pick
   hideAtsHint?: boolean;
   tourDone?: boolean;
   celebrateConfetti: boolean; // confetti + glow when a task is checked off

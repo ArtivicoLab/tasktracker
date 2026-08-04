@@ -220,3 +220,20 @@ export async function writeTab(
 export function spreadsheetUrl(id: string): string {
   return `https://docs.google.com/spreadsheets/d/${id}/edit`;
 }
+
+/**
+ * The signed-in Google account's own email, via Drive's about.get — needs no
+ * new scope, drive.file already permits it. Lets the app remember which
+ * Google account a sync connection last worked with (see sync.ts's
+ * rememberAccountEmail), since a buyer with several Google accounts otherwise
+ * has no way to know which one to pick at reauth/on a new device.
+ */
+export async function fetchAccountEmail(allowInteractive: boolean): Promise<string> {
+  const res = await authedFetch(
+    "https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",
+    {},
+    allowInteractive
+  );
+  const json = (await ok(res)) as { user?: { emailAddress?: string } };
+  return json.user?.emailAddress ?? "";
+}
